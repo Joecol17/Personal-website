@@ -28,20 +28,24 @@ function fallback() {
 }
 
 let started = false;
-const io = new IntersectionObserver(
-  (entries) => {
-    if (entries[0].isIntersecting && !started) {
-      started = true;
-      io.disconnect();
-      boot().catch((err) => {
-        console.error(err);
-        fallback();
-      });
-    }
-  },
-  { rootMargin: "600px 0px" }
-);
-if (stage) io.observe(stage);
+function start() {
+  if (started) return;
+  started = true;
+  io.disconnect();
+  boot().catch((err) => {
+    console.error(err);
+    fallback();
+  });
+}
+const io = new IntersectionObserver((entries) => entries[0].isIntersecting && start(), { rootMargin: "1200px 0px" });
+if (stage) {
+  io.observe(stage);
+  // warm up in the background once the page has settled, so it's ready before you scroll down
+  const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+  const later = () => idle(start, { timeout: 4000 });
+  if (document.readyState === "complete") later();
+  else window.addEventListener("load", later, { once: true });
+}
 
 async function boot() {
   const [THREE, { createGeo }, { createTextures }, { buildPC, CASE }, { createBloom }, { loadHDR }] = await Promise.all([
@@ -324,12 +328,13 @@ async function boot() {
   // ---------- Typing pulses the motherboard RGB ----------
   let visible = false;
   let active = false;
+  let ready = false;
   new IntersectionObserver(
     ([entry]) => {
       visible = entry.isIntersecting;
       active = entry.intersectionRatio >= 0.55;
       stage.classList.toggle("is-active", active);
-      if (visible) loop();
+      if (visible && ready) loop();
     },
     { threshold: [0, 0.55] }
   ).observe(stage);
@@ -438,10 +443,21 @@ async function boot() {
     requestAnimationFrame(frame);
   }
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && visible) loop();
+    if (!document.hidden && visible && ready) loop();
   });
 
+  // Nothing is drawn until the lighting is in and every shader is compiled. compileAsync
+  // uses parallel shader compilation where the GPU supports it, so the page stays responsive.
   await envReady;
+  const loading = stage.querySelector(".setup-loading");
+  if (loading) loading.textContent = "Warming up shaders…";
+  try {
+    if (renderer.extensions.has("KHR_parallel_shader_compile")) await renderer.compileAsync(scene, camera);
+    else renderer.compile(scene, camera);
+  } catch (e) {
+    // shaders will compile on the first frame instead
+  }
+  ready = true;
   shadowFrames = 2;
   stage.classList.add("is-ready");
   if (visible) loop();

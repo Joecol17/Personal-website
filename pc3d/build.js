@@ -39,7 +39,10 @@ export function buildPC(THREE, G, T, { hi }) {
 
   // ---------------- Materials ----------------
   const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0, ...o });
-  const phys = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.4, metalness: 0, ...o });
+  // Everything uses MeshStandardMaterial so the scene compiles to as few shader programs as
+  // possible (each extra physical feature is another slow-to-compile program on some GPUs).
+  // eslint-disable-next-line no-unused-vars
+  const phys = (color, { clearcoat, clearcoatRoughness, anisotropy, specularIntensity, ...o } = {}) => std(color, { roughness: 0.4, ...o });
   const brushed = T.brushed;
   const M = {
     caseSteel: phys(0x121316, { metalness: 0.55, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.5 }),
