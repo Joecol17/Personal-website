@@ -210,6 +210,7 @@ p { margin: 0 0 1rem; }
 .contact .section-title { justify-content: center; }
 .contact .section-title::after { display: none; }
 .contact-text { color: var(--muted); max-width: 540px; margin: 0 auto 32px; font-size: 1.1rem; }
+.contact .muted { margin-top: 28px; }
 .contact-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px 28px; margin: 32px 0 16px; }
 
 /* Footer */
