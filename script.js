@@ -164,12 +164,19 @@ function init() {
   }
 
   // Hero drifts up and fades as you scroll past it
-  gsap.to(".hero > :not(.scroll-hint)", {
-    yPercent: -18,
-    opacity: 0.15,
-    ease: "none",
-    scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
-  });
+  // (explicit start values: otherwise it can capture the entrance animation's opacity: 0
+  // as its starting point and leave the buttons faded out)
+  gsap.fromTo(
+    ".hero > :not(.scroll-hint)",
+    { yPercent: 0, opacity: 1 },
+    {
+      yPercent: -18,
+      opacity: 0.15,
+      ease: "none",
+      immediateRender: false,
+      scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
+    }
+  );
 
   // ---------- Section titles: words rise + rule draws in ----------
   document.querySelectorAll(".section-title").forEach((title) => {
