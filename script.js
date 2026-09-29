@@ -49,7 +49,23 @@ function setGrid(on) {
 }
 
 gridToggle.addEventListener("click", () => setGrid(!gridOn));
+// Shared hooks used by the terminal and other interactive pieces
+window.site = {
+  setGrid,
+  isGridOn: () => gridOn,
+  scrollTo(target) {
+    const el = typeof target === "string" ? document.querySelector(target) : target;
+    if (!el) return;
+    if (window.site.lenis) window.site.lenis.scrollTo(el, { offset: -72, duration: 1.4 });
+    else el.scrollIntoView({ behavior: "smooth" });
+  },
+};
+
+// Ignore shortcut keys while the visitor is typing in a field
+window.isTyping = (e) => e.target.closest && e.target.closest("input, textarea, [contenteditable]");
+
 document.addEventListener("keydown", (e) => {
+  if (window.isTyping(e)) return;
   if (e.key.toLowerCase() === "g" && !e.metaKey && !e.ctrlKey && !e.altKey) setGrid(!gridOn);
 });
 
@@ -64,6 +80,7 @@ if (animate) {
 function init() {
   // ---------- Smooth scrolling ----------
   const lenis = new Lenis({ lerp: 0.09 });
+  window.site.lenis = lenis;
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);

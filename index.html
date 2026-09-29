@@ -47,6 +47,7 @@
       <button class="grid-toggle mono" aria-pressed="false" title="Show layout grid (G)">
         <span class="grid-toggle-dot"></span>Grid <span class="grid-state">off</span>
       </button>
+      <button class="term-toggle mono" title="Open terminal ( ` )" aria-label="Open terminal">&gt;_</button>
       <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
         <span></span><span></span>
       </button>
@@ -55,7 +56,7 @@
         <li><a href="#experience">Experience</a></li>
         <li><a href="#education">Education</a></li>
         <li><a href="#skills">Skills</a></li>
-        <li><a href="#projects">Beyond Work</a></li>
+        <li><a href="#setup">Setup</a></li>
         <li><a href="#contact" class="nav-cta">Contact</a></li>
       </ul>
     </nav>
@@ -64,7 +65,7 @@
   <main id="top">
     <!-- Hero -->
     <section class="hero container">
-      <p class="mono eyebrow">&gt; hello, world</p>
+      <p class="mono eyebrow">&gt; hello, world <button class="eyebrow-term" type="button">— try my terminal <kbd>`</kbd></button></p>
       <h1 class="hero-title"><span class="hero-line">Joseph</span><span class="hero-line hero-line-indent">Collyer</span></h1>
       <p class="hero-sub" data-split>
         <strong>Apprentice Infrastructure Engineer at Datum</strong>, working towards a
@@ -130,6 +131,29 @@
     <!-- Experience -->
     <section id="experience" class="section container reveal">
       <h2 class="section-title"><span class="mono">02.</span> Experience</h2>
+
+      <!-- Career network map (network.js) -->
+      <div id="network" class="netmap">
+        <div class="netmap-head">
+          <h3 class="sub-title">My network</h3>
+          <p class="netmap-hint mono">Hover or tap a node to trace its links</p>
+        </div>
+        <div class="netmap-wrap">
+          <div class="netmap-scroll">
+            <svg class="netmap-svg" viewBox="0 40 1100 410" role="group" aria-label="Career network map: school, work, certifications and personal projects all linking to Datum"></svg>
+          </div>
+          <div class="netmap-info" aria-live="polite"></div>
+        </div>
+        <ul class="netmap-legend mono">
+          <li class="net-edu"><span></span>Education</li>
+          <li class="net-work"><span></span>Work</li>
+          <li class="net-cert"><span></span>Certification</li>
+          <li class="net-extra"><span></span>Personal</li>
+          <li class="net-now"><span></span>Now</li>
+        </ul>
+      </div>
+
+      <h3 class="sub-title timeline-title">Timeline</h3>
       <ol class="timeline">
         <li class="timeline-item">
           <div class="timeline-date mono">Oct 2026 – Oct 2029</div>
@@ -270,9 +294,46 @@
       </div>
     </section>
 
+    <!-- 3D setup (pc3d.js) -->
+    <section id="setup" class="section container reveal">
+      <h2 class="section-title"><span class="mono">05.</span> My setup</h2>
+      <p class="setup-intro" data-split>
+        I've been building PCs since 2020, starting with spare parts from charity shops. Here's a
+        desk setup to take apart: drag to look around, click a numbered hotspot to inspect a part,
+        and type on your keyboard to use mine.
+      </p>
+      <div class="setup">
+        <div class="setup-stage">
+          <canvas class="setup-canvas" aria-label="Interactive 3D model of a desk setup with a gaming PC"></canvas>
+          <div class="setup-hotspots"></div>
+          <p class="setup-loading mono">Booting setup…</p>
+          <p class="setup-fallback">Your browser can't show 3D here, but you can still browse the parts on the right.</p>
+          <div class="setup-controls">
+            <button type="button" class="setup-btn" data-action="explode" aria-pressed="false">Explode PC</button>
+            <button type="button" class="setup-btn" data-action="power" aria-pressed="false">Power off</button>
+            <button type="button" class="setup-btn" data-action="reset">Reset view</button>
+          </div>
+          <p class="setup-hint mono"><span class="setup-hint-drag">Drag to rotate</span><span class="setup-hint-keys">⌨ Keyboard live: start typing</span></p>
+        </div>
+        <aside class="setup-panel is-intro" aria-live="polite">
+          <p class="setup-panel-idx mono">00 / 11</p>
+          <div class="setup-panel-body">
+            <p class="setup-panel-kind mono">Setup</p>
+            <h3 class="setup-panel-title">Pick a part</h3>
+            <p class="setup-panel-text">Click a numbered hotspot or any part of the PC, or use the arrows below to walk through the build one part at a time.</p>
+            <p class="setup-panel-tip"><strong>Try</strong> hit “Explode PC” to pull the tower apart.</p>
+          </div>
+          <div class="setup-nav">
+            <button type="button" class="setup-btn" data-action="prev" aria-label="Previous part">←</button>
+            <button type="button" class="setup-btn" data-action="next" aria-label="Next part">Next part →</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
     <!-- Beyond work -->
     <section id="projects" class="section container reveal">
-      <h2 class="section-title"><span class="mono">05.</span> Beyond work</h2>
+      <h2 class="section-title"><span class="mono">06.</span> Beyond work</h2>
       <div class="edu-grid">
         <article class="card">
           <p class="timeline-date mono">2020 – Present</p>
@@ -301,7 +362,7 @@
 
     <!-- Contact -->
     <section id="contact" class="section container reveal contact">
-      <h2 class="section-title"><span class="mono">06.</span> Get in touch</h2>
+      <h2 class="section-title"><span class="mono">07.</span> Get in touch</h2>
       <p class="contact-text" data-split>
         I'm always happy to connect with people working in networking, infrastructure and
         tech. You can find my certifications on Credly.
@@ -310,6 +371,24 @@
       <p class="muted">References available on request.</p>
     </section>
   </main>
+
+  <!-- Terminal (terminal.js) -->
+  <div class="term" role="dialog" aria-modal="true" aria-label="Terminal" hidden>
+    <div class="term-window">
+      <div class="term-bar">
+        <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="term-title mono">joseph@portfolio: ~</span>
+        <button class="term-close" type="button" aria-label="Close terminal">×</button>
+      </div>
+      <div class="term-body mono" data-lenis-prevent>
+        <div class="term-output"></div>
+        <form class="term-line">
+          <label class="t-prompt" for="term-input">joseph@portfolio:~$</label>
+          <input id="term-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send">
+        </form>
+      </div>
+    </div>
+  </div>
 
   <footer class="site-footer container">
     <p>© <span id="year"></span> Joseph Collyer · Built with HTML, CSS &amp; JavaScript</p>
@@ -320,5 +399,8 @@
   <script src="vendor/SplitText.min.js"></script>
   <script src="vendor/lenis.min.js"></script>
   <script src="script.js"></script>
+  <script src="terminal.js"></script>
+  <script src="network.js"></script>
+  <script type="module" src="pc3d.js"></script>
 </body>
 </html>
