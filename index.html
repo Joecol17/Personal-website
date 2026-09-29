@@ -298,13 +298,13 @@
     <section id="setup" class="section container reveal">
       <h2 class="section-title"><span class="mono">05.</span> My setup</h2>
       <p class="setup-intro" data-split>
-        I've been building PCs since 2020, starting with spare parts from charity shops. Here's a
-        desk setup to take apart: drag to look around, click a numbered hotspot to inspect a part,
-        and type on your keyboard to use mine.
+        I've been building PCs since 2020, starting with spare parts from charity shops. This is my
+        current build, modelled part by part in code at real-world size: drag to look around, click a
+        numbered hotspot for the part and its specs, and hit “Explode PC” to take it apart in build order.
       </p>
       <div class="setup">
         <div class="setup-stage">
-          <canvas class="setup-canvas" aria-label="Interactive 3D model of a desk setup with a gaming PC"></canvas>
+          <canvas class="setup-canvas" aria-label="Interactive 3D model of my PC build in a Lian Li O11 Dynamic Mini V2 case"></canvas>
           <div class="setup-hotspots"></div>
           <p class="setup-loading mono">Booting setup…</p>
           <p class="setup-fallback">Your browser can't show 3D here, but you can still browse the parts on the right.</p>
@@ -313,15 +313,16 @@
             <button type="button" class="setup-btn" data-action="power" aria-pressed="false">Power off</button>
             <button type="button" class="setup-btn" data-action="reset">Reset view</button>
           </div>
-          <p class="setup-hint mono"><span class="setup-hint-drag">Drag to rotate</span><span class="setup-hint-keys">⌨ Keyboard live: start typing</span></p>
+          <p class="setup-hint mono"><span class="setup-hint-drag">Drag to rotate</span><span class="setup-hint-keys">⌨ Type to pulse the RGB</span></p>
         </div>
         <aside class="setup-panel is-intro" aria-live="polite">
           <p class="setup-panel-idx mono">00 / 11</p>
           <div class="setup-panel-body">
-            <p class="setup-panel-kind mono">Setup</p>
+            <p class="setup-panel-kind mono">My build</p>
             <h3 class="setup-panel-title">Pick a part</h3>
+            <ul class="setup-panel-specs"></ul>
             <p class="setup-panel-text">Click a numbered hotspot or any part of the PC, or use the arrows below to walk through the build one part at a time.</p>
-            <p class="setup-panel-tip"><strong>Try</strong> hit “Explode PC” to pull the tower apart.</p>
+            <p class="setup-panel-tip"><strong>Try</strong> hit “Explode PC” to watch the parts come out in the order they go in.</p>
           </div>
           <div class="setup-nav">
             <button type="button" class="setup-btn" data-action="prev" aria-label="Previous part">←</button>

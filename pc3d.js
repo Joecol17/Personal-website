@@ -1,44 +1,31 @@
-// Interactive 3D desk setup: orbit, inspect parts, explode the PC, and type on the keyboard.
-// three.js is only downloaded once the section gets close to the screen.
+// Interactive 3D model of my PC, built part by part in code at real-world dimensions.
+// Orbit it, inspect each part, explode it in build order, and power it off.
+// three.js (and the studio HDRI) are only downloaded once the section gets close to the screen.
+
+import { PARTS } from "./pc3d/parts.js";
 
 const stage = document.querySelector(".setup-stage");
 const panel = document.querySelector(".setup-panel");
 
-const PARTS = [
-  { id: "monitor", name: "Monitor", kind: "Display",
-    text: "Where everything comes together. Mine's running a terminal: type on your keyboard and watch it appear on screen.",
-    tip: "Check your refresh rate in display settings. Plenty of 144 Hz monitors are left running at 60 Hz." },
-  { id: "keyboard", name: "Mechanical keyboard", kind: "Input",
-    text: "Each key has its own switch underneath. Go on, type something: the keys on mine press down with yours.",
-    tip: "Different switches feel different: linear, tactile or clicky. Try before you buy." },
-  { id: "mouse", name: "Mouse", kind: "Input",
-    text: "An optical sensor tracks the surface thousands of times a second. It follows your cursor while it's over the scene.",
-    tip: "Lower in-game sensitivity with a bigger mouse mat usually means better aim." },
-  { id: "case", name: "Case", kind: "Enclosure",
-    text: "Holds everything together and controls airflow. The tempered-glass side panel slides off when you explode the build.",
-    tip: "Plan your cable management before you start. It's much harder once the GPU is in." },
-  { id: "cpu", name: "CPU + cooler", kind: "Processor",
-    text: "The CPU runs every instruction; the tower cooler and fan pull heat away so it can hold its boost clocks.",
-    tip: "A pea-sized dot of thermal paste is plenty. The mounting pressure spreads it." },
-  { id: "gpu", name: "Graphics card", kind: "GPU",
-    text: "Thousands of small cores working in parallel to draw every frame. Usually the biggest and hungriest part in the build.",
-    tip: "Check case clearance and PSU wattage before buying a new GPU." },
-  { id: "ram", name: "Memory (RAM)", kind: "Memory",
-    text: "Fast, temporary storage for whatever the CPU is working on right now. Two sticks run in dual channel.",
-    tip: "Turn on XMP/EXPO in the BIOS, otherwise RAM runs slower than the speed on the box." },
-  { id: "motherboard", name: "Motherboard", kind: "Mainboard",
-    text: "The backbone that connects every component and carries power and data between them.",
-    tip: "Use slots A2 and B2 for two sticks of RAM. The manual will say which ones." },
-  { id: "storage", name: "Storage", kind: "SSD",
-    text: "An NVMe M.2 SSD on the board for the OS and games, plus a 2.5\" SATA SSD for extra space.",
-    tip: "Put the OS on NVMe. It boots in seconds compared with a hard drive." },
-  { id: "psu", name: "Power supply", kind: "PSU",
-    text: "Converts mains AC into the stable DC voltages every other part relies on.",
-    tip: "Never cheap out on the PSU. A good 80+ rated unit protects everything else." },
-  { id: "fans", name: "Case fans", kind: "Cooling",
-    text: "Three intakes at the front, one exhaust at the back. The RGB is purely for style.",
-    tip: "Aim for slightly more intake than exhaust (positive pressure) to keep dust out." },
-];
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function fillPanel(i) {
+  const p = PARTS[i];
+  panel.querySelector(".setup-panel-idx").textContent = `${String(i + 1).padStart(2, "0")} / ${PARTS.length}`;
+  panel.querySelector(".setup-panel-kind").textContent = p.step ? `${p.kind} · build step ${p.step}` : p.kind;
+  panel.querySelector(".setup-panel-title").textContent = p.name;
+  panel.querySelector(".setup-panel-specs").innerHTML = p.specs.map((s) => `<li>${esc(s)}</li>`).join("");
+  panel.querySelector(".setup-panel-text").textContent = p.text;
+  panel.querySelector(".setup-panel-tip").innerHTML = `<strong>Build tip</strong> ${esc(p.tip)}`;
+  panel.classList.remove("is-intro");
+}
+
+// Without WebGL the side panel still walks through the parts
+function fallback() {
+  stage.classList.add("is-fallback");
+  let i = -1;
+  panel.querySelector('[data-action="prev"]').addEventListener("click", () => fillPanel((i = i < 1 ? PARTS.length - 1 : i - 1)));
+  panel.querySelector('[data-action="next"]').addEventListener("click", () => fillPanel((i = (i + 1) % PARTS.length)));
+}
 
 let started = false;
 const io = new IntersectionObserver(
@@ -48,7 +35,7 @@ const io = new IntersectionObserver(
       io.disconnect();
       boot().catch((err) => {
         console.error(err);
-        stage.classList.add("is-fallback");
+        fallback();
       });
     }
   },
@@ -57,471 +44,161 @@ const io = new IntersectionObserver(
 if (stage) io.observe(stage);
 
 async function boot() {
-  const THREE = await import("./vendor/three.bundle.min.js");
+  const [THREE, { createGeo }, { createTextures }, { buildPC, CASE }, { createBloom }, { loadHDR }] = await Promise.all([
+    import("./vendor/three.bundle.min.js"),
+    import("./pc3d/geo.js"),
+    import("./pc3d/textures.js"),
+    import("./pc3d/build.js"),
+    import("./pc3d/bloom.js"),
+    import("./pc3d/hdr.js"),
+  ]);
   const gsap = window.gsap;
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const hi = !matchMedia("(max-width: 720px), (pointer: coarse)").matches;
   const canvas = stage.querySelector(".setup-canvas");
   const hotspotLayer = stage.querySelector(".setup-hotspots");
 
-  // ---------- Renderer, scene, camera ----------
+  // ---------- Renderer ----------
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" });
   } catch (e) {
-    stage.classList.add("is-fallback");
+    fallback();
     return;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, hi ? 1.75 : 1.5));
+  renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+
+  const canBloom = renderer.extensions.has("EXT_color_buffer_float") || renderer.extensions.has("EXT_color_buffer_half_float");
+  const bloom = canBloom ? createBloom(THREE, renderer, { levels: hi ? 5 : 3, samples: hi ? 4 : 2, strength: 0.9, threshold: 2.4 }) : null;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 50);
-  const HOME = { pos: new THREE.Vector3(0.32, 1.05, 2.3), target: new THREE.Vector3(0.26, 0.3, 0) };
-  camera.position.copy(HOME.pos);
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
 
+  // ---------- Model ----------
+  const G = createGeo(THREE);
+  const T = createTextures(THREE, { hi });
+  const pc = buildPC(THREE, G, T, { hi });
+  const MM = 0.001;
+  const world = pc.root;
+  world.scale.setScalar(MM);
+  world.position.y = (-CASE.H / 2) * MM;
+  scene.add(world);
+
+  // ---------- Lighting: studio HDRI for reflections + one shadow-casting key light ----------
+  scene.add(new THREE.HemisphereLight(0xe8eef5, 0x1a1a1e, 0.35));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2);
+  key.position.set(-1.6, 0.75, 0.9);
+  key.castShadow = true;
+  key.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024);
+  Object.assign(key.shadow.camera, { left: -0.36, right: 0.36, top: 0.36, bottom: -0.36, near: 0.5, far: 3.5 });
+  key.shadow.bias = -0.0004;
+  key.shadow.normalBias = 0.0015;
+  key.shadow.radius = hi ? 4 : 2;
+  scene.add(key);
+  const envReady = loadHDR(THREE, "assets/studio_small_08_1k.hdr")
+    .then((tex) => {
+      scene.environment = tex;
+      scene.environmentIntensity = 1.25;
+      scene.environmentRotation.y = -0.6;
+    })
+    .catch((err) => {
+      // no HDRI: fall back to plain lights
+      console.warn("Studio HDRI unavailable, using basic lighting", err);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x303035, 1.2));
+    });
+
+  // ---------- Camera + controls ----------
+  const HOME_DIR = new THREE.Vector3(-1.15, 0.5, 0.85).normalize();
+  const HOME_TARGET = new THREE.Vector3(0, 0.005, 0);
+  let homeDist = 1.12;
+  camera.position.copy(HOME_DIR).multiplyScalar(homeDist).add(HOME_TARGET);
   const controls = new THREE.OrbitControls(camera, canvas);
-  controls.target.copy(HOME.target);
-  controls.enableDamping = true;
+  controls.target.copy(HOME_TARGET);
+  controls.enableDamping = !reduceMotion;
   controls.dampingFactor = 0.08;
   controls.enableZoom = false;
   controls.enablePan = false;
-  controls.minPolarAngle = 0.35;
-  controls.maxPolarAngle = 1.45;
-  controls.minAzimuthAngle = -1.2;
-  controls.maxAzimuthAngle = 1.2;
+  controls.minPolarAngle = 0.2;
+  controls.maxPolarAngle = 1.75;
   controls.rotateSpeed = 0.6;
   // Let vertical swipes scroll the page on touch screens; horizontal drags rotate
   canvas.style.touchAction = "pan-y";
 
-  // ---------- Lights ----------
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x2a2018, 1.1));
-  const key = new THREE.DirectionalLight(0xffffff, 2.2);
-  key.position.set(1.6, 3, 2.2);
-  key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
-  key.shadow.camera.left = -1.6;
-  key.shadow.camera.right = 1.6;
-  key.shadow.camera.top = 1.2;
-  key.shadow.camera.bottom = -1.2;
-  key.shadow.bias = -0.0005;
-  scene.add(key);
-  const rim = new THREE.DirectionalLight(0x88aaff, 0.8);
-  rim.position.set(-2, 1.5, -2);
-  scene.add(rim);
-
-  // ---------- Helpers ----------
-  const mat = (color, opts = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.1, ...opts });
-  const M = {
-    desk: mat(0x3b2a20, { roughness: 0.75 }),
-    deskEdge: mat(0x2a1d16),
-    dark: mat(0x16181d, { roughness: 0.5, metalness: 0.3 }),
-    darker: mat(0x0d0f12, { roughness: 0.45, metalness: 0.4 }),
-    metal: mat(0x9aa3ad, { roughness: 0.35, metalness: 0.8 }),
-    pcb: mat(0x121821, { roughness: 0.7 }),
-    keyBase: mat(0x1b1e24, { roughness: 0.4, metalness: 0.2 }),
-    mat: mat(0x14161a, { roughness: 0.95 }),
-    white: mat(0xe9edf2, { roughness: 0.5 }),
-    glass: new THREE.MeshPhysicalMaterial({ color: 0x9fb6c8, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0, depthWrite: false, side: THREE.DoubleSide }),
-  };
-  const rgbMats = [];
-  const rgb = (offset = 0, intensity = 2.2) => {
-    const m = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x4f9dff, emissiveIntensity: intensity, roughness: 0.4 });
-    m.userData = { offset, intensity };
-    rgbMats.push(m);
-    return m;
-  };
-
-  function box(w, h, d, material, parent, x = 0, y = 0, z = 0) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
-  }
-  function cyl(rt, rb, h, material, parent, seg = 32) {
-    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), material);
-    mesh.castShadow = true;
-    parent.add(mesh);
-    return mesh;
-  }
-  const part = (id, parent) => {
-    const g = new THREE.Group();
-    g.userData.part = id;
-    parent.add(g);
-    return g;
-  };
-
-  // ---------- Desk ----------
-  const world = new THREE.Group();
-  scene.add(world);
-  const desk = box(2.3, 0.045, 0.95, M.desk, world, 0.15, -0.0225, -0.05);
-  desk.castShadow = false;
-  box(2.3, 0.012, 0.95, M.deskEdge, world, 0.15, -0.051, -0.05);
-  [[-0.95, 0.35], [1.25, 0.35], [-0.95, -0.45], [1.25, -0.45]].forEach(([x, z]) =>
-    box(0.05, 0.7, 0.05, M.darker, world, x, -0.4, z)
-  );
-
-  // ---------- Monitor with a live terminal screen ----------
-  const monitor = part("monitor", world);
-  monitor.position.set(-0.22, 0, -0.28);
-  box(0.28, 0.012, 0.18, M.dark, monitor, 0, 0.006, 0);
-  box(0.045, 0.3, 0.03, M.dark, monitor, 0, 0.16, -0.02);
-  box(1.02, 0.6, 0.035, M.darker, monitor, 0, 0.53, 0.01);
-  box(0.9, 0.5, 0.03, M.dark, monitor, 0, 0.53, -0.015);
-
-  const screenCanvas = document.createElement("canvas");
-  screenCanvas.width = 1024;
-  screenCanvas.height = 576;
-  const sctx = screenCanvas.getContext("2d");
-  const screenTex = new THREE.CanvasTexture(screenCanvas);
-  screenTex.colorSpace = THREE.SRGBColorSpace;
-  screenTex.anisotropy = 4;
-  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.555), screenMat);
-  screen.position.set(0, 0.53, 0.0285);
-  monitor.add(screen);
-  const glow = new THREE.PointLight(0x4f9dff, 0.35, 1.2);
-  glow.position.set(0, 0.5, 0.35);
-  monitor.add(glow);
-
-  const screenState = { lines: [], typed: "", on: true };
-  const intro = [
-    ["$ neofetch", "#7ee0c3"],
-    ["joseph@datum", "#4f9dff"],
-    ["Role     Apprentice Infrastructure Engineer", "#c9d1d9"],
-    ["Degree   BSc (Hons) DTS: Network Engineer", "#c9d1d9"],
-    ["Certs    Cisco Ethical Hacker · IT Essentials", "#c9d1d9"],
-    ["", ""],
-    ["Type on your keyboard. Press ` for the full terminal.", "#6e7681"],
-  ];
-  function drawScreen(blink = true) {
-    const c = sctx;
-    c.fillStyle = "#0b0f14";
-    c.fillRect(0, 0, 1024, 576);
-    if (!screenState.on) {
-      c.fillStyle = "#050607";
-      c.fillRect(0, 0, 1024, 576);
-      screenTex.needsUpdate = true;
-      return;
-    }
-    // title bar
-    c.fillStyle = "#161b22";
-    c.fillRect(0, 0, 1024, 44);
-    ["#ff5f57", "#febc2e", "#28c840"].forEach((col, i) => {
-      c.fillStyle = col;
-      c.beginPath();
-      c.arc(28 + i * 26, 22, 8, 0, Math.PI * 2);
-      c.fill();
-    });
-    c.fillStyle = "#8b949e";
-    c.font = "22px 'JetBrains Mono', ui-monospace, monospace";
-    c.fillText("joseph@datum: ~", 430, 30);
-    c.font = "26px 'JetBrains Mono', ui-monospace, monospace";
-    const all = [...intro, ...screenState.lines];
-    const visible = all.slice(-13);
-    visible.forEach(([text, col], i) => {
-      c.fillStyle = col || "#c9d1d9";
-      c.fillText(text, 32, 92 + i * 36);
-    });
-    const y = 92 + visible.length * 36;
-    c.fillStyle = "#7ee0c3";
-    c.fillText("$", 32, y);
-    c.fillStyle = "#e6edf3";
-    const typed = screenState.typed.slice(-50);
-    c.fillText(typed, 62, y);
-    if (blink && Math.floor(performance.now() / 530) % 2 === 0) {
-      const w = c.measureText(typed).width;
-      c.fillStyle = "#4f9dff";
-      c.fillRect(64 + w, y - 22, 14, 28);
-    }
-    screenTex.needsUpdate = true;
-  }
-  drawScreen();
-
-  // ---------- Keyboard ----------
-  const keyboard = part("keyboard", world);
-  keyboard.position.set(-0.2, 0, 0.2);
-  const U = 0.0355;
-  const layout = [
-    [["Backquote", "`"], ["Digit1", "1"], ["Digit2", "2"], ["Digit3", "3"], ["Digit4", "4"], ["Digit5", "5"], ["Digit6", "6"], ["Digit7", "7"], ["Digit8", "8"], ["Digit9", "9"], ["Digit0", "0"], ["Minus", "-"], ["Equal", "="], ["Backspace", "⌫", 2]],
-    [["Tab", "tab", 1.5], ["KeyQ", "Q"], ["KeyW", "W"], ["KeyE", "E"], ["KeyR", "R"], ["KeyT", "T"], ["KeyY", "Y"], ["KeyU", "U"], ["KeyI", "I"], ["KeyO", "O"], ["KeyP", "P"], ["BracketLeft", "["], ["BracketRight", "]"], ["Backslash", "\\", 1.5]],
-    [["CapsLock", "caps", 1.75], ["KeyA", "A"], ["KeyS", "S"], ["KeyD", "D"], ["KeyF", "F"], ["KeyG", "G"], ["KeyH", "H"], ["KeyJ", "J"], ["KeyK", "K"], ["KeyL", "L"], ["Semicolon", ";"], ["Quote", "'"], ["Enter", "enter", 2.25]],
-    [["ShiftLeft", "shift", 2.25], ["KeyZ", "Z"], ["KeyX", "X"], ["KeyC", "C"], ["KeyV", "V"], ["KeyB", "B"], ["KeyN", "N"], ["KeyM", "M"], ["Comma", ","], ["Period", "."], ["Slash", "/"], ["ShiftRight", "shift", 2.75]],
-    [["ControlLeft", "ctrl", 1.25], ["MetaLeft", "", 1.25], ["AltLeft", "alt", 1.25], ["Space", "", 6.25], ["AltRight", "alt", 1.25], ["Fn", "fn", 1.25], ["ContextMenu", "", 1.25], ["ControlRight", "ctrl", 1.25]],
-  ];
-  const kbW = 15 * U + 0.025;
-  const kbD = 5 * U + 0.025;
-  box(kbW, 0.022, kbD, M.keyBase, keyboard, 0, 0.011, 0);
-  const underglow = new THREE.Mesh(new THREE.BoxGeometry(kbW - 0.01, 0.004, kbD - 0.01), rgb(0.3, 1.2));
-  underglow.position.y = 0.0225;
-  keyboard.add(underglow);
-
-  const keyMeshes = {};
-  const keyGeoCache = {};
-  const keySide = mat(0x23262d, { roughness: 0.55 });
-  function legendMaterial(label) {
-    const cv = document.createElement("canvas");
-    cv.width = cv.height = 64;
-    const c = cv.getContext("2d");
-    c.fillStyle = "#2b2f37";
-    c.fillRect(0, 0, 64, 64);
-    if (label) {
-      c.fillStyle = "#d7dde5";
-      c.font = `${label.length > 1 ? 15 : 26}px Inter, Arial, sans-serif`;
-      c.textAlign = "center";
-      c.textBaseline = "middle";
-      c.fillText(label, 32, 34);
-    }
-    const tex = new THREE.CanvasTexture(cv);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5, emissive: 0x4f9dff, emissiveIntensity: 0 });
-  }
-  layout.forEach((row, r) => {
-    let x = -7.5 * U;
-    row.forEach(([code, label, w = 1]) => {
-      const kw = w * U - 0.005;
-      const geo = keyGeoCache[w] || (keyGeoCache[w] = new THREE.BoxGeometry(kw, 0.012, U - 0.005));
-      const top = legendMaterial(label);
-      const mesh = new THREE.Mesh(geo, [keySide, keySide, top, keySide, keySide, keySide]);
-      mesh.position.set(x + (w * U) / 2, 0.029, -2 * U + r * U);
-      mesh.castShadow = true;
-      mesh.userData.restY = mesh.position.y;
-      mesh.userData.top = top;
-      keyboard.add(mesh);
-      keyMeshes[code] = mesh;
-      x += w * U;
-    });
-  });
-
-  function pressKey(code, down) {
-    const k = keyMeshes[code];
-    if (!k) return;
-    const y = down ? k.userData.restY - 0.006 : k.userData.restY;
-    if (gsap) {
-      gsap.to(k.position, { y, duration: down ? 0.05 : 0.18, ease: down ? "power2.out" : "back.out(3)", overwrite: true });
-      gsap.to(k.userData.top, { emissiveIntensity: down ? 1.4 : 0, duration: down ? 0.05 : 0.6, overwrite: true });
-    } else {
-      k.position.y = y;
-      k.userData.top.emissiveIntensity = down ? 1.4 : 0;
-    }
-  }
-
-  // ---------- Mouse + mat ----------
-  const mouseGroup = part("mouse", world);
-  mouseGroup.position.set(0.33, 0, 0.2);
-  box(0.36, 0.004, 0.3, M.mat, mouseGroup, 0, 0.002, 0).castShadow = false;
-  const mouse = new THREE.Mesh(new THREE.CapsuleGeometry(0.028, 0.04, 8, 16), M.dark);
-  mouse.rotation.x = Math.PI / 2;
-  mouse.scale.set(1, 1, 0.55);
-  mouse.position.y = 0.02;
-  mouse.castShadow = true;
-  mouseGroup.add(mouse);
-  const wheel = cyl(0.007, 0.007, 0.006, rgb(0.6, 1.5), mouse, 16);
-  wheel.rotation.z = Math.PI / 2;
-  wheel.position.set(0, -0.03, -0.022);
-
-  // ---------- Tower ----------
-  const tower = part("case", world);
-  tower.position.set(0.88, 0, -0.12);
-  tower.rotation.y = 1.1; // turn the glass side towards the viewer
-  const TW = 0.23;
-  const TH = 0.48;
-  const TD = 0.46;
-  const tCenter = new THREE.Group();
-  tCenter.position.y = TH / 2 + 0.01;
-  tower.add(tCenter);
-  // feet
-  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => box(0.03, 0.01, 0.03, M.darker, tower, sx * 0.08, 0.005, sz * 0.18));
-  // panels (+x side, top, bottom, back, front)
-  box(0.006, TH, TD, M.dark, tCenter, TW / 2, 0, 0);
-  box(TW, 0.006, TD, M.dark, tCenter, 0, TH / 2, 0);
-  box(TW, 0.006, TD, M.dark, tCenter, 0, -TH / 2, 0);
-  box(TW, TH, 0.006, M.dark, tCenter, 0, 0, -TD / 2);
-  box(TW, TH, 0.012, M.darker, tCenter, 0, 0, TD / 2);
-  box(0.008, TH - 0.06, 0.004, rgb(0, 2.5), tCenter, -TW / 2 + 0.03, 0, TD / 2 + 0.008);
-  const powerBtn = cyl(0.009, 0.009, 0.004, rgb(0.5, 3), tCenter, 16);
-  powerBtn.position.set(0, TH / 2 + 0.004, TD / 2 - 0.05);
-
-  // glass side panel (-x, facing the camera)
-  const glassPart = part("glass", tCenter);
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.004, TH, TD), M.glass);
-  glass.position.x = -TW / 2;
-  glassPart.add(glass);
-  glassPart.userData.part = "case";
-
-  const interior = new THREE.PointLight(0x4f9dff, 0.9, 0.7);
-  interior.position.set(-0.02, 0.05, 0.05);
-  tCenter.add(interior);
-
-  // motherboard
-  const mobo = part("motherboard", tCenter);
-  box(0.004, 0.3, 0.3, M.pcb, mobo, TW / 2 - 0.008, 0.06, -0.05);
-  box(0.012, 0.05, 0.02, M.metal, mobo, TW / 2 - 0.015, 0.17, -0.16); // VRM heatsink
-  box(0.012, 0.02, 0.09, M.metal, mobo, TW / 2 - 0.015, 0.2, -0.07);
-  box(0.01, 0.06, 0.06, M.metal, mobo, TW / 2 - 0.014, -0.05, 0.06); // chipset
-  for (let i = 0; i < 3; i++) box(0.006, 0.006, 0.12, M.darker, mobo, TW / 2 - 0.012, -0.02 - i * 0.03, -0.08); // pcie slots
-
-  // CPU cooler (tower heatsink + fan)
-  const cpu = part("cpu", tCenter);
-  box(0.004, 0.045, 0.045, M.metal, cpu, TW / 2 - 0.012, 0.1, -0.06);
-  const sink = new THREE.Group();
-  sink.position.set(TW / 2 - 0.06, 0.1, -0.06);
-  cpu.add(sink);
-  for (let i = 0; i < 12; i++) box(0.085, 0.09, 0.0025, M.metal, sink, 0, 0, -0.04 + i * 0.0072);
-  const cpuFan = makeFan(0.045, 0.2);
-  cpuFan.group.position.set(0, 0, 0.05);
-  sink.add(cpuFan.group);
-
-  // RAM
-  const ram = part("ram", tCenter);
-  for (let i = 0; i < 2; i++) {
-    const stick = new THREE.Group();
-    stick.position.set(TW / 2 - 0.028, 0.105, 0.035 + i * 0.016);
-    ram.add(stick);
-    box(0.036, 0.1, 0.006, M.darker, stick, 0, 0, 0);
-    box(0.006, 0.098, 0.007, rgb(0.15 + i * 0.1, 2.2), stick, -0.02, 0, 0);
-  }
-
-  // GPU
-  const gpu = part("gpu", tCenter);
-  const gpuBody = new THREE.Group();
-  gpuBody.position.set(TW / 2 - 0.075, -0.03, -0.03);
-  gpu.add(gpuBody);
-  box(0.13, 0.045, 0.28, M.darker, gpuBody, 0, 0, 0);
-  box(0.13, 0.004, 0.28, M.metal, gpuBody, 0, 0.024, 0); // backplate
-  box(0.004, 0.035, 0.24, rgb(0.45, 2.4), gpuBody, -0.066, 0, 0);
-  [-0.07, 0.07].forEach((z) => {
-    const f = makeFan(0.045, 0.45);
-    f.group.rotation.x = Math.PI / 2;
-    f.group.position.set(0, -0.024, z);
-    gpuBody.add(f.group);
-  });
-
-  // Storage: M.2 on the board + a 2.5" SSD on the floor
-  const storage = part("storage", tCenter);
-  box(0.004, 0.02, 0.08, mat(0x0e3b2e), storage, TW / 2 - 0.012, 0.03, 0.01);
-  box(0.07, 0.008, 0.1, M.white, storage, -0.02, -TH / 2 + 0.012, 0.13);
-
-  // PSU at the bottom
-  const psu = part("psu", tCenter);
-  box(0.15, 0.085, 0.15, M.darker, psu, 0.02, -TH / 2 + 0.05, -0.13);
-  box(0.002, 0.06, 0.1, M.metal, psu, -0.056, -TH / 2 + 0.05, -0.13);
-
-  // Case fans: three intakes at the front, one exhaust at the back
-  const fans = part("fans", tCenter);
-  const allFans = [cpuFan];
-  [-0.14, 0, 0.14].forEach((y, i) => {
-    const f = makeFan(0.062, 0.1 + i * 0.12);
-    f.group.position.set(0, y, TD / 2 - 0.025);
-    fans.add(f.group);
-    allFans.push(f);
-  });
-  const rear = makeFan(0.055, 0.7);
-  rear.group.position.set(0, 0.14, -TD / 2 + 0.02);
-  fans.add(rear.group);
-  allFans.push(rear);
-
-  function makeFan(r, hueOffset) {
-    const group = new THREE.Group();
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.09, 10, 40), rgb(hueOffset, 2.6));
-    group.add(ring);
-    const frame = new THREE.Mesh(new THREE.TorusGeometry(r * 1.02, r * 0.14, 6, 4), M.darker);
-    frame.rotation.z = Math.PI / 4;
-    frame.scale.set(1.25, 1.25, 1);
-    group.add(frame);
-    const rotor = new THREE.Group();
-    group.add(rotor);
-    const hub = cyl(r * 0.3, r * 0.3, r * 0.25, M.darker, rotor, 20);
-    hub.rotation.x = Math.PI / 2;
-    for (let i = 0; i < 7; i++) {
-      const blade = new THREE.Mesh(new THREE.BoxGeometry(r * 0.62, r * 0.28, 0.002), M.dark);
-      blade.position.x = r * 0.55;
-      const holder = new THREE.Group();
-      holder.rotation.z = (i / 7) * Math.PI * 2;
-      blade.rotation.x = 0.35;
-      holder.add(blade);
-      rotor.add(holder);
-    }
-    return { group, rotor, speed: 9 + Math.random() * 4 };
-  }
-
-  // A mug, because every desk has one
-  const mug = new THREE.Group();
-  mug.position.set(0.47, 0, -0.33);
-  world.add(mug);
-  const mugBody = cyl(0.04, 0.036, 0.1, M.white, mug);
-  mugBody.position.y = 0.05;
-  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 8, 20, Math.PI), M.white);
-  handle.rotation.z = -Math.PI / 2;
-  handle.position.set(0.04, 0.05, 0);
-  mug.add(handle);
-
-  // ---------- Exploded view ----------
-  const explodeTargets = [
-    [glassPart, { x: -0.42, y: 0.04 }],
-    [gpu, { x: -0.26, y: -0.03 }],
-    [cpu, { x: -0.3, y: 0.12 }],
-    [ram, { x: -0.2, y: 0.2 }],
-    [storage, { x: -0.18, y: -0.02 }],
-    [psu, { x: -0.2, y: -0.08 }],
-    [fans, { x: -0.06, z: 0.1 }],
-    [mobo, { x: 0.04 }],
-  ].map(([obj, off]) => ({ obj, off, home: obj.position.clone() }));
+  // ---------- Exploded view (parts separate in build order) ----------
+  const explodeTargets = pc.explode.map((e) => ({ ...e, home: e.obj.position.clone() }));
+  for (const e of explodeTargets) if (e.fade) for (const m of e.fade) m.userData.opacity = m.opacity;
+  const fadeTo = (e, on) => e.fade.map((m) => ({ m, to: on ? 0 : m.userData.opacity }));
   let exploded = false;
+  let shadowFrames = 2;
+  function finalPos(e, on, out) {
+    return out.set(e.home.x + (on ? e.off[0] : 0), e.home.y + (on ? e.off[1] : 0), e.home.z + (on ? e.off[2] : 0));
+  }
   function setExploded(on) {
     exploded = on;
     stage.classList.toggle("is-exploded", on);
-    explodeTargets.forEach(({ obj, off, home }, i) => {
-      const to = { x: home.x + (on ? off.x || 0 : 0), y: home.y + (on ? off.y || 0 : 0), z: home.z + (on ? off.z || 0 : 0) };
-      if (gsap && !reduceMotion) gsap.to(obj.position, { ...to, duration: 1.1, delay: (on ? i : explodeTargets.length - i) * 0.05, ease: "expo.inOut" });
-      else obj.position.set(to.x, to.y, to.z);
+    const n = explodeTargets.length;
+    explodeTargets.forEach((e, i) => {
+      const to = finalPos(e, on, new THREE.Vector3());
+      const delay = (on ? i : n - 1 - i) * 0.09;
+      if (gsap && !reduceMotion) {
+        gsap.to(e.obj.position, { x: to.x, y: to.y, z: to.z, duration: 1.1, delay, ease: "expo.inOut", overwrite: true, onUpdate: () => (shadowFrames = 2) });
+        if (e.fade) {
+          if (!on) e.obj.visible = true;
+          for (const { m, to } of fadeTo(e, on)) gsap.to(m, { opacity: to, duration: 0.5, delay, overwrite: true, onComplete: () => (e.obj.visible = !on) });
+        }
+      } else {
+        e.obj.position.copy(to);
+        if (e.fade) {
+          for (const { m, to } of fadeTo(e, on)) m.opacity = to;
+          e.obj.visible = !on;
+        }
+      }
     });
-    stage.querySelector('[data-action="explode"]').textContent = on ? "Rebuild PC" : "Explode PC";
-    stage.querySelector('[data-action="explode"]').setAttribute("aria-pressed", String(on));
+    shadowFrames = 2;
+    if (current < 0) flyTo(homePose(on).pos, homePose(on).target);
+    const btn = stage.querySelector('[data-action="explode"]');
+    btn.textContent = on ? "Rebuild PC" : "Explode PC";
+    btn.setAttribute("aria-pressed", String(on));
   }
 
-  // ---------- Power (RGB, fans, screen) ----------
+  // ---------- Power: fans, RGB and glow ----------
   let powered = true;
+  let power = 1; // eased 0..1
   function setPower(on) {
     powered = on;
-    screenState.on = on;
-    drawScreen();
     const btn = stage.querySelector('[data-action="power"]');
     btn.textContent = on ? "Power off" : "Power on";
     btn.setAttribute("aria-pressed", String(!on));
-    glow.visible = on;
-    interior.visible = on;
-    rgbMats.forEach((m) => (m.emissiveIntensity = on ? m.userData.intensity : 0));
+    if (reduceMotion) power = on ? 1 : 0;
   }
 
   // ---------- Hotspots ----------
-  const anchors = {
-    monitor: [monitor, [0, 0.86, 0.02]],
-    keyboard: [keyboard, [0.12, 0.05, 0]],
-    mouse: [mouseGroup, [0, 0.05, 0]],
-    case: [tower, [-0.02, TH + 0.06, TD / 2 - 0.02]],
-    cpu: [sink, [-0.05, 0.05, 0]],
-    gpu: [gpuBody, [-0.07, 0.01, 0.08]],
-    ram: [ram, [TW / 2 - 0.05, 0.17, 0.043]],
-    motherboard: [mobo, [TW / 2 - 0.01, -0.07, -0.16]],
-    storage: [storage, [-0.02, -TH / 2 + 0.03, 0.13]],
-    psu: [psu, [-0.06, -TH / 2 + 0.06, -0.08]],
-    fans: [fans, [-0.02, -0.14, TD / 2 - 0.02]],
+  const INNER = new Set(["cpu", "psu", "hdd"]); // hidden until the build is exploded
+  // parts that are easier to see with the build taken apart (true) or put together (false)
+  const EXPLODE_FOR = { cpu: true, psu: true, hdd: true, motherboard: true, ssd: true, cables: false };
+  const VIEWS = {
+    case: { dir: [-0.9, 0.5, 1.05], dist: 1.2 },
+    motherboard: { dir: [-1, 0.3, 0.45], dist: 0.62 },
+    cpu: { dir: [-1, 0.45, 0.35], dist: 0.34 },
+    cooler: { dir: [-1, 0.2, 0.75], dist: 0.62 },
+    ram: { dir: [-1, 0.55, 0.45], dist: 0.36 },
+    ssd: { dir: [-1, 0.45, 0.4], dist: 0.32 },
+    gpu: { dir: [-1, 0.3, 0.55], dist: 0.72 },
+    riser: { dir: [-0.45, 0.1, 1], dist: 0.42 },
+    psu: { dir: [0.35, 0.45, 1], dist: 0.62 },
+    hdd: { dir: [0.35, 0.45, 1], dist: 0.55 },
+    cables: { dir: [-1, 0.35, 0.8], dist: 0.5 },
   };
-  const views = {
-    monitor: { dist: 1.25, dir: [0.1, 0.25, 1] },
-    keyboard: { dist: 0.75, dir: [0, 0.9, 0.9] },
-    mouse: { dist: 0.6, dir: [0.2, 0.9, 0.8] },
-    case: { dist: 1.2, dir: [-0.35, 0.45, 1] },
-  };
-  const INSIDE = new Set(["cpu", "gpu", "ram", "motherboard", "storage", "psu", "fans"]);
   const hotspots = PARTS.map((p, i) => {
     const b = document.createElement("button");
-    b.className = "hotspot" + (INSIDE.has(p.id) ? " is-inner" : "");
+    b.className = "hotspot" + (INNER.has(p.id) ? " is-inner" : "");
     b.type = "button";
     b.innerHTML = `<span>${String(i + 1).padStart(2, "0")}</span>`;
     b.setAttribute("aria-label", `Inspect ${p.name}`);
@@ -529,18 +206,33 @@ async function boot() {
     hotspotLayer.appendChild(b);
     return b;
   });
+  panel.querySelector(".setup-panel-idx").textContent = `00 / ${PARTS.length}`;
 
   let current = -1;
   const tmp = new THREE.Vector3();
   function anchorWorld(id, out) {
-    const [obj, off] = anchors[id];
-    return obj.localToWorld(out.set(off[0], off[1], off[2]));
+    const [obj, at] = pc.anchors[id];
+    return obj.localToWorld(out.set(at[0], at[1], at[2]));
+  }
+  function withFinalPose(fn) {
+    const saved = explodeTargets.map((e) => e.obj.position.clone());
+    explodeTargets.forEach((e) => finalPos(e, exploded, e.obj.position));
+    world.updateMatrixWorld(true);
+    fn();
+    explodeTargets.forEach((e, i) => e.obj.position.copy(saved[i]));
+    world.updateMatrixWorld(true);
   }
 
+  // default framing; pulled back and raised a little when exploded so every part fits
+  function homePose(on) {
+    const target = HOME_TARGET.clone();
+    if (on) target.y += 0.06;
+    return { pos: HOME_DIR.clone().multiplyScalar(homeDist * (on ? 1.55 : 1)).add(target), target };
+  }
   function flyTo(pos, target) {
     if (gsap && !reduceMotion) {
-      gsap.to(camera.position, { x: pos.x, y: pos.y, z: pos.z, duration: 1.3, ease: "expo.inOut" });
-      gsap.to(controls.target, { x: target.x, y: target.y, z: target.z, duration: 1.3, ease: "expo.inOut" });
+      gsap.to(camera.position, { x: pos.x, y: pos.y, z: pos.z, duration: 1.3, ease: "expo.inOut", overwrite: true });
+      gsap.to(controls.target, { x: target.x, y: target.y, z: target.z, duration: 1.3, ease: "expo.inOut", overwrite: true });
     } else {
       camera.position.copy(pos);
       controls.target.copy(target);
@@ -551,54 +243,20 @@ async function boot() {
     current = (i + PARTS.length) % PARTS.length;
     const p = PARTS[current];
     hotspots.forEach((h, k) => h.classList.toggle("is-active", k === current));
-    panel.querySelector(".setup-panel-idx").textContent = `${String(current + 1).padStart(2, "0")} / ${PARTS.length}`;
-    panel.querySelector(".setup-panel-kind").textContent = p.kind;
-    panel.querySelector(".setup-panel-title").textContent = p.name;
-    panel.querySelector(".setup-panel-text").textContent = p.text;
-    panel.querySelector(".setup-panel-tip").innerHTML = `<strong>Build tip</strong> ${p.tip}`;
-    panel.classList.remove("is-intro");
+    fillPanel(current);
     if (gsap && !reduceMotion) gsap.fromTo(panel.querySelectorAll(".setup-panel-body > *"), { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.05, ease: "power3.out" });
 
-    // Parts inside the tower are easier to see with the glass off
-    const inside = INSIDE.has(p.id);
-    if (inside && !exploded) setExploded(true);
-
-    // Aim at where the part will be once the explode animation finishes
+    if (p.id in EXPLODE_FOR && EXPLODE_FOR[p.id] !== exploded) setExploded(EXPLODE_FOR[p.id]);
     const target = new THREE.Vector3();
     withFinalPose(() => anchorWorld(p.id, target));
-    let dir;
-    let dist;
-    if (views[p.id]) {
-      dir = new THREE.Vector3(...views[p.id].dir);
-      dist = views[p.id].dist;
-    } else {
-      // look in through the open side of the case
-      dir = new THREE.Vector3(-1, 0.5, 0.3).applyQuaternion(tower.quaternion);
-      dist = p.id === "fans" || p.id === "motherboard" ? 1.15 : 0.9;
-    }
-    dir.normalize();
-    flyTo(target.clone().add(dir.multiplyScalar(dist)), target);
-  }
-
-  function withFinalPose(fn) {
-    const saved = explodeTargets.map(({ obj }) => obj.position.clone());
-    explodeTargets.forEach(({ obj, off, home }) => {
-      obj.position.set(
-        home.x + (exploded ? off.x || 0 : 0),
-        home.y + (exploded ? off.y || 0 : 0),
-        home.z + (exploded ? off.z || 0 : 0)
-      );
-    });
-    world.updateMatrixWorld(true);
-    fn();
-    explodeTargets.forEach(({ obj }, i) => obj.position.copy(saved[i]));
-    world.updateMatrixWorld(true);
+    const v = VIEWS[p.id];
+    const dir = new THREE.Vector3(...v.dir).normalize();
+    flyTo(target.clone().addScaledVector(dir, v.dist * fitFactor()), p.id === "case" ? HOME_TARGET : target);
   }
 
   function resetView() {
     current = -1;
     hotspots.forEach((h) => h.classList.remove("is-active"));
-    flyTo(HOME.pos, HOME.target);
     setExploded(false);
   }
 
@@ -608,28 +266,51 @@ async function boot() {
   stage.querySelector('[data-action="power"]').addEventListener("click", () => setPower(!powered));
   stage.querySelector('[data-action="reset"]').addEventListener("click", resetView);
 
-  // ---------- Pointer: hover parts, click to inspect, mouse follows cursor ----------
+  // ---------- Pointer: hover and click parts ----------
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  let pointerInside = false;
   let downAt = null;
   const partIndex = Object.fromEntries(PARTS.map((p, i) => [p.id, i]));
+  const skip = new Set([pc.M.glassTint, pc.M.glassReflect]);
   function partAt(e) {
     const r = canvas.getBoundingClientRect();
     pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(world.children, true).find((h) => h.object.visible && h.object.material !== M.glass);
+    const hit = raycaster.intersectObjects(world.children, true).find((h) => !skip.has(h.object.material) && isVisible(h.object));
     let o = hit && hit.object;
     while (o && !o.userData.part) o = o.parent;
     return o ? o.userData.part : null;
   }
+  const ray = new THREE.Raycaster();
+  const dirTmp = new THREE.Vector3();
+  function occluded(id, at) {
+    dirTmp.copy(at).sub(camera.position);
+    const dist = dirTmp.length();
+    ray.set(camera.position, dirTmp.normalize());
+    ray.far = dist - 0.012;
+    const hit = ray.intersectObjects(world.children, true).find((h) => !skip.has(h.object.material) && isVisible(h.object));
+    if (!hit) return false;
+    let o = hit.object;
+    while (o && !o.userData.part) o = o.parent;
+    return !o || o.userData.part !== id;
+  }
+  function isVisible(o) {
+    for (; o; o = o.parent) if (!o.visible) return false;
+    return true;
+  }
+  let hoverQueued = null;
   canvas.addEventListener("pointermove", (e) => {
-    pointerInside = true;
-    const id = partAt(e);
-    canvas.style.cursor = id ? "pointer" : "grab";
-    stage.dataset.hover = id || "";
+    if (e.pointerType !== "mouse" || e.buttons) return;
+    // throttle hover raycasts to one per frame
+    if (!hoverQueued)
+      requestAnimationFrame(() => {
+        const id = partAt(hoverQueued);
+        canvas.style.cursor = id ? "pointer" : "grab";
+        stage.dataset.hover = id || "";
+        hoverQueued = null;
+      });
+    hoverQueued = e;
   });
-  canvas.addEventListener("pointerleave", () => (pointerInside = false));
   canvas.addEventListener("pointerdown", (e) => (downAt = [e.clientX, e.clientY]));
   canvas.addEventListener("pointerup", (e) => {
     if (!downAt) return;
@@ -640,7 +321,7 @@ async function boot() {
     if (id && id in partIndex) select(partIndex[id]);
   });
 
-  // ---------- Typing on the real keyboard drives the 3D one ----------
+  // ---------- Typing pulses the motherboard RGB ----------
   let visible = false;
   let active = false;
   new IntersectionObserver(
@@ -653,67 +334,57 @@ async function boot() {
     { threshold: [0, 0.55] }
   ).observe(stage);
 
-  const held = new Set();
+  let pulse = 0;
+  let hueKick = 0;
   const terminalOpen = () => document.body.classList.contains("term-open");
   document.addEventListener(
     "keydown",
     (e) => {
-      if (!active || terminalOpen() || (window.isTyping && window.isTyping(e)) || e.metaKey || e.ctrlKey) return;
-      if (e.code === "Backquote" || !keyMeshes[e.code]) return; // let ` open the terminal
-      if (!held.has(e.code)) pressKey(e.code, true);
-      held.add(e.code);
-      if (e.code === "Tab") return; // keep keyboard navigation working
-      // Captured: don't also toggle the grid, scroll the page, etc.
+      if (!active || terminalOpen() || (window.isTyping && window.isTyping(e)) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1 || e.code === "Backquote") return; // let ` open the terminal
+      // Captured: don't also toggle the grid overlay etc.
       e.stopImmediatePropagation();
-      if (e.code === "Space" || e.code.startsWith("Arrow")) e.preventDefault();
-      if (!powered) return;
-      if (e.key === "Backspace") screenState.typed = screenState.typed.slice(0, -1);
-      else if (e.key === "Enter") {
-        const cmd = screenState.typed.trim();
-        screenState.lines.push([`$ ${cmd}`, "#e6edf3"]);
-        if (cmd) screenState.lines.push([reply(cmd), "#8b949e"]);
-        screenState.typed = "";
-      } else if (e.key.length === 1) screenState.typed += e.key;
-      drawScreen();
+      if (!powered || e.repeat) return;
+      pulse = Math.min(pulse + 0.8, 2.2);
+      hueKick = (hueKick + 0.137) % 1;
     },
     true
   );
-  document.addEventListener("keyup", (e) => {
-    if (held.delete(e.code)) pressKey(e.code, false);
-  });
-  window.addEventListener("blur", () => {
-    held.forEach((c) => pressKey(c, false));
-    held.clear();
-  });
 
-  function reply(cmd) {
-    const c = cmd.toLowerCase();
-    if (c === "help") return "This is only a mini screen. Press ` for the full terminal.";
-    if (c === "whoami") return "joseph: apprentice infrastructure engineer @ datum";
-    if (c.startsWith("ping")) return "64 bytes from 10.26.10.5: icmp_seq=0 ttl=64 time=0.42 ms";
-    if (c === "clear") {
-      screenState.lines = [];
-      return "";
-    }
-    return `${cmd.split(" ")[0]}: command not found (try help)`;
+  // ---------- Resize ----------
+  function fitFactor() {
+    // pull back on narrow (portrait) stages so the whole case still fits
+    return Math.max(1, 1.15 / Math.max(0.5, camera.aspect));
   }
-
-  // ---------- Resize + render loop ----------
   function resize() {
     const { width, height } = stage.getBoundingClientRect();
+    if (!width || !height) return;
     renderer.setSize(width, height, false);
+    if (bloom) bloom.setSize(width, height);
     camera.aspect = width / height;
-    // Pull the camera back a bit on narrow screens so the whole desk fits
-    camera.fov = width < 480 ? 60 : width < 800 ? 48 : 38;
     camera.updateProjectionMatrix();
+    const next = 1.12 * fitFactor();
+    if (current < 0 && Math.abs(next - homeDist) > 1e-3) {
+      const d = camera.position.clone().sub(controls.target);
+      camera.position.copy(controls.target).addScaledVector(d.normalize(), next);
+    }
+    homeDist = next;
   }
   new ResizeObserver(resize).observe(stage);
   resize();
 
+  // ---------- Render loop (only while the section is on screen) ----------
   let lastTime = 0;
   let running = false;
-  const mouseHome = mouse.position.clone();
-  const lastPointer = new THREE.Vector2();
+  let frameNo = 0;
+  const { width: w0 } = stage.getBoundingClientRect();
+  let stageW = w0;
+  let stageH = 1;
+  new ResizeObserver(([e]) => {
+    stageW = e.contentRect.width;
+    stageH = e.contentRect.height;
+  }).observe(stage);
+
   function loop() {
     if (running) return;
     running = true;
@@ -729,32 +400,37 @@ async function boot() {
       const t = now / 1000;
       controls.update();
 
-      if (powered && !reduceMotion) {
-        allFans.forEach((f) => (f.rotor.rotation.z += f.speed * dt));
-        rgbMats.forEach((m) => m.emissive.setHSL((t * 0.08 + m.userData.offset) % 1, 0.85, 0.55));
-        interior.color.setHSL((t * 0.08 + 0.2) % 1, 0.8, 0.6);
-      }
-      // the desk mouse follows your cursor a little
-      if (pointerInside) lastPointer.copy(pointer);
-      mouse.position.x += (mouseHome.x + lastPointer.x * 0.07 - mouse.position.x) * 0.12;
-      mouse.position.z += (mouseHome.z - lastPointer.y * 0.06 - mouse.position.z) * 0.12;
-
-      // cursor blink on the monitor
-      if (powered && Math.floor(t * 1.9) !== frame.blink) {
-        frame.blink = Math.floor(t * 1.9);
-        drawScreen();
+      // power eases fans up/down like real hardware
+      const targetPower = powered ? 1 : 0;
+      power += (targetPower - power) * Math.min(1, dt * (powered ? 1.6 : 1.1));
+      if (!reduceMotion)
+        for (const f of pc.fans) f.rotor.rotation.z += f.speed * power * dt;
+      pulse *= Math.exp(-dt * 3.2);
+      const lit = powered ? 1 : 0;
+      for (const m of pc.rgbMats) {
+        const hue = reduceMotion ? 0.58 : (t * 0.05 + m.userData.offset + hueKick) % 1;
+        m.emissive.setHSL(hue, 0.9, 0.55);
+        m.emissiveIntensity = m.userData.intensity * lit * power * (1 + pulse * 1.4);
       }
 
-      renderer.render(scene, camera);
+      if (shadowFrames > 0) {
+        renderer.shadowMap.needsUpdate = true;
+        shadowFrames--;
+      }
+      if (bloom) bloom.render(scene, camera, power * (1 + pulse * 0.6));
+      else renderer.render(scene, camera);
 
-      // position the HTML hotspots over their 3D anchors
-      const { width, height } = canvas.getBoundingClientRect();
+      // position the HTML hotspots over their 3D anchors; every few frames, dim the
+      // ones whose part is hidden behind another part
+      frameNo++;
+      const checkOcclusion = frameNo % 8 === 0;
       PARTS.forEach((p, i) => {
-        anchorWorld(p.id, tmp).project(camera);
+        anchorWorld(p.id, tmp);
+        if (checkOcclusion) hotspots[i].classList.toggle("is-occluded", occluded(p.id, tmp));
+        tmp.project(camera);
         const h = hotspots[i];
-        const hidden = tmp.z > 1;
-        h.style.transform = `translate(${((tmp.x + 1) / 2) * width}px, ${((1 - tmp.y) / 2) * height}px)`;
-        h.classList.toggle("is-hidden", hidden);
+        h.style.transform = `translate(${((tmp.x + 1) / 2) * stageW}px, ${((1 - tmp.y) / 2) * stageH}px)`;
+        h.classList.toggle("is-hidden", tmp.z > 1 || Math.abs(tmp.x) > 1.05 || Math.abs(tmp.y) > 1.05);
       });
 
       requestAnimationFrame(frame);
@@ -765,6 +441,8 @@ async function boot() {
     if (!document.hidden && visible) loop();
   });
 
+  await envReady;
+  shadowFrames = 2;
   stage.classList.add("is-ready");
   if (visible) loop();
 }

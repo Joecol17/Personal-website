@@ -530,6 +530,8 @@ body.term-open { overflow: hidden; }
 .hotspot:hover, .hotspot.is-active { background: #ff5c7a; box-shadow: 0 0 0 5px rgba(255,92,122,.3); }
 .hotspot.is-active::before { border-color: #ff5c7a; }
 .hotspot.is-hidden { opacity: 0; pointer-events: none; }
+.hotspot.is-occluded:not(.is-active):not(:hover) { opacity: .45; }
+.hotspot.is-occluded::before { animation: none; opacity: 0; }
 .setup-stage:not(.is-exploded) .hotspot.is-inner { opacity: 0; pointer-events: none; }
 .setup-stage:not(.is-ready) .hotspot { display: none; }
 
@@ -558,6 +560,9 @@ body.term-open { overflow: hidden; }
 .setup-panel-kind { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent-2); margin-bottom: 6px; }
 .setup-panel-title { font-size: 1.5rem; margin-bottom: 12px; }
 .setup-panel-text { color: var(--muted); font-size: 0.95rem; }
+.setup-panel-specs { list-style: none; margin: 0 0 14px; padding: 0; font: 0.78rem/1.45 "JetBrains Mono", monospace; color: var(--text); }
+.setup-panel-specs li { padding: 5px 0; border-bottom: 1px dashed var(--border); }
+.setup-panel-specs:empty { display: none; }
 .setup-panel-tip {
   font-size: 0.88rem; padding: 12px 14px; border-radius: 10px;
   background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px dashed color-mix(in srgb, var(--accent) 40%, transparent);
@@ -574,6 +579,7 @@ body.term-open { overflow: hidden; }
 }
 @media (max-width: 720px) {
   .setup-stage { height: 440px; }
+  .hotspot { width: 24px; height: 24px; margin: -12px 0 0 -12px; font-size: 0.6rem; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
   .setup-btn { padding: 6px 11px; font-size: 0.76rem; }
   .term-toggle { margin-left: 6px; }
   .eyebrow-term { display: block; margin: 4px 0 0; }
