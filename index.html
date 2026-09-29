@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Joe Collyer — Selected achievements</title>
+<meta name="description" content="Joe Collyer's portfolio: achievements, experience and education.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Martian+Mono:wdth,wght@75..112,300..600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Preloader -->
+<div class="loader" id="loader" aria-hidden="true">
+  <span class="loader__count" id="count">000</span>
+  <span class="loader__label">Loading portfolio</span>
+  <span class="loader__bar" id="bar"></span>
+</div>
+
+<!-- Column grid: purely visual, lights up under the cursor -->
+<div class="grid" aria-hidden="true">
+  <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+</div>
+
+<!-- Cursor label -->
+<div class="tag" id="tag" aria-hidden="true"></div>
+
+<header class="nav">
+  <a href="#top" class="nav__logo">J.C</a>
+  <nav aria-label="Sections">
+    <a href="#work">Achievements</a>
+    <a href="#path">Path</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <span class="nav__status"><b></b> Open to opportunities</span>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="mono hero__meta reveal">Portfolio &middot; <span id="year">2026</span></p>
+    <h1 class="hero__name" id="name" aria-label="Joe Collyer">
+      <span class="line"><span class="line__in" data-vary>Joe</span></span>
+      <span class="line"><span class="line__in" data-vary>Collyer</span></span>
+    </h1>
+    <div class="hero__foot">
+      <p class="hero__role reveal">Add your role here &mdash; a single sentence on what you do and what you care about.</p>
+      <p class="mono hero__hint reveal">Move your cursor across the name<br>&darr; Scroll</p>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee__track">
+      <span>Achievements</span><span>Experience</span><span>Education</span><span>Projects</span><span>Awards</span>
+      <span>Achievements</span><span>Experience</span><span>Education</span><span>Projects</span><span>Awards</span>
+    </div>
+  </div>
+
+  <!-- ABOUT -->
+  <section class="about">
+    <p class="mono label reveal">About</p>
+    <p class="about__text reveal">
+      Write two or three sentences here. Say who you are, what you've built or won, and what you want to do next. Keep it specific &mdash; numbers and names beat adjectives.
+    </p>
+    <dl class="about__facts reveal">
+      <div><dt class="mono">Based in</dt><dd>City, Country</dd></div>
+      <div><dt class="mono">Focus</dt><dd>Your field</dd></div>
+      <div><dt class="mono">Currently</dt><dd>Role / Studying at</dd></div>
+    </dl>
+  </section>
+
+  <!-- ACHIEVEMENTS -->
+  <section class="work" id="work">
+    <div class="section-head">
+      <p class="mono label">Achievements</p>
+      <h2 class="reveal">Selected<br>wins</h2>
+    </div>
+
+    <ul class="rows">
+      <li class="row" data-tag="Read the story">
+        <span class="row__year mono">2026</span>
+        <h3 class="row__title">First-place achievement title</h3>
+        <span class="row__org">Organisation or event</span>
+        <span class="row__cat mono">Award</span>
+        <p class="row__desc">One or two lines on what you did and the result. Replace this with a real number: rank, users, money raised, time saved.</p>
+      </li>
+      <li class="row" data-tag="Read the story">
+        <span class="row__year mono">2025</span>
+        <h3 class="row__title">Project you shipped</h3>
+        <span class="row__org">Company or personal</span>
+        <span class="row__cat mono">Project</span>
+        <p class="row__desc">What it was, who used it, and what changed because of it.</p>
+      </li>
+      <li class="row" data-tag="Read the story">
+        <span class="row__year mono">2024</span>
+        <h3 class="row__title">Scholarship or certification</h3>
+        <span class="row__org">Institution</span>
+        <span class="row__cat mono">Academic</span>
+        <p class="row__desc">Why it was competitive and what it recognised.</p>
+      </li>
+      <li class="row" data-tag="Read the story">
+        <span class="row__year mono">2023</span>
+        <h3 class="row__title">Competition or hackathon</h3>
+        <span class="row__org">Event name</span>
+        <span class="row__cat mono">Competition</span>
+        <p class="row__desc">Team size, what you built in the time, and where you placed.</p>
+      </li>
+      <li class="row" data-tag="Read the story">
+        <span class="row__year mono">2022</span>
+        <h3 class="row__title">Leadership or volunteering</h3>
+        <span class="row__org">Club or charity</span>
+        <span class="row__cat mono">Leadership</span>
+        <p class="row__desc">What you led, how many people, and what it achieved.</p>
+      </li>
+    </ul>
+  </section>
+
+  <!-- PATH: real chronology, so order is meaningful -->
+  <section class="path" id="path">
+    <div class="section-head">
+      <p class="mono label">Path</p>
+      <h2 class="reveal">Where<br>I've been</h2>
+    </div>
+    <ol class="timeline">
+      <li class="reveal"><span class="mono">2025 &mdash; Now</span><div><h3>Current role or course</h3><p>Organisation &middot; one line on your responsibilities.</p></div></li>
+      <li class="reveal"><span class="mono">2023 &mdash; 2025</span><div><h3>Previous role</h3><p>Organisation &middot; one line on what you owned.</p></div></li>
+      <li class="reveal"><span class="mono">2020 &mdash; 2023</span><div><h3>Education</h3><p>School or university &middot; qualification and grade.</p></div></li>
+    </ol>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="contact" id="contact">
+    <p class="mono label reveal">Contact</p>
+    <a class="contact__mail" href="mailto:josephcollyer118@gmail.com" data-vary>
+      <span class="line"><span class="line__in">Let's</span></span>
+      <span class="line"><span class="line__in">talk&nbsp;&rarr;</span></span>
+    </a>
+    <div class="contact__foot mono">
+      <a href="mailto:josephcollyer118@gmail.com">josephcollyer118@gmail.com</a>
+      <a href="https://github.com/joecol17" rel="noopener">GitHub</a>
+      <a href="#">LinkedIn</a>
+      <a href="#top">Back to top &uarr;</a>
+    </div>
+  </section>
+
+</main>
+
+<script src="main.js"></script>
+</body>
+</html>
