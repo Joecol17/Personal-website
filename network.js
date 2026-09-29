@@ -37,7 +37,6 @@
     ["prefect", "college"],
     ["pc", "college"],
     ["pc", "placement"],
-    ["invotra", "cisco"],
     ["college", "cisco"],
     ["college", "placement"],
     ["waitrose", "datum"],

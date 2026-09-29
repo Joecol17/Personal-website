@@ -95,6 +95,18 @@ function init() {
     })
   );
 
+  // Recalculate scroll trigger positions whenever the page height changes
+  // (web fonts, the network map and the 3D section all settle after load)
+  let refreshTimer;
+  let lastHeight = document.body.scrollHeight;
+  new ResizeObserver(() => {
+    const h = document.body.scrollHeight;
+    if (h === lastHeight) return;
+    lastHeight = h;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 200);
+  }).observe(document.body);
+
   // ---------- Nav links roll their text on hover ----------
   document.querySelectorAll(".nav-links a").forEach((a) => {
     const text = a.textContent;

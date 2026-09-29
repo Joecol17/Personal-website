@@ -59,7 +59,8 @@
       ),
     "contact.txt": () =>
       print(
-        'Credly: <a href="https://www.credly.com/users/joe-collyer117c" target="_blank" rel="noopener">credly.com/users/joe-collyer117c</a>\n' +
+        'LinkedIn: <a href="https://www.linkedin.com/in/joseph-collyer-511746370" target="_blank" rel="noopener">linkedin.com/in/joseph-collyer-511746370</a>\n' +
+          'Credly: <a href="https://www.credly.com/users/joe-collyer117c" target="_blank" rel="noopener">credly.com/users/joe-collyer117c</a>\n' +
           "References available on request."
       ),
   };
@@ -230,7 +231,7 @@
           print(
             "[sudo] password for recruiter: ********\n" +
               '<span class="t-ok">already done</span> — joseph is employed by Datum (2026–2029) ✔\n' +
-              "you can still say hi: cd contact"
+              "you can still say hi: type linkedin"
           );
         } else if (!cmd) {
           print("usage: sudo &lt;command&gt;", "t-err");
@@ -242,6 +243,13 @@
     history: {
       desc: "command history",
       run: () => print(history.map((h, i) => `${String(i + 1).padStart(4)}  ${esc(h)}`).join("\n") || "(empty)"),
+    },
+    linkedin: {
+      desc: "open my LinkedIn profile",
+      run() {
+        print('opening <a href="https://www.linkedin.com/in/joseph-collyer-511746370" target="_blank" rel="noopener">linkedin.com/in/joseph-collyer-511746370</a> …');
+        window.open("https://www.linkedin.com/in/joseph-collyer-511746370", "_blank", "noopener");
+      },
     },
     date: { desc: "current date", run: () => print(new Date().toString()) },
     echo: { desc: "print text", run: (args) => print(esc(args.join(" "))) },
