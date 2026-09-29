@@ -41,8 +41,9 @@ const io = new IntersectionObserver((entries) => entries[0].isIntersecting && st
 if (stage) {
   io.observe(stage);
   // warm up in the background once the page has settled, so it's ready before you scroll down
-  const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
-  const later = () => idle(start, { timeout: 4000 });
+  // (after the hero entrance has played, and only when the browser is otherwise idle)
+  const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+  const later = () => setTimeout(() => idle(start), 3500);
   if (document.readyState === "complete") later();
   else window.addEventListener("load", later, { once: true });
 }
@@ -70,7 +71,11 @@ async function boot() {
     fallback();
     return;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, hi ? 1.75 : 1.5));
+  // Resolution steps: full quality by default, stepping down only if frames run slow
+  const PR_MAX = Math.min(window.devicePixelRatio, hi ? 1.75 : 1.5);
+  const PR_STEPS = [PR_MAX, 1.5, 1.25, 1, 0.8].filter((v, i, a) => v <= PR_MAX && a.indexOf(v) === i);
+  let quality = 0;
+  renderer.setPixelRatio(PR_STEPS[0]);
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -88,7 +93,7 @@ async function boot() {
   // ---------- Model ----------
   const G = createGeo(THREE);
   const T = createTextures(THREE, { hi });
-  const pc = buildPC(THREE, G, T, { hi });
+  const pc = await buildPC(THREE, G, T, { hi });
   const MM = 0.001;
   const world = pc.root;
   world.scale.setScalar(MM);
@@ -153,6 +158,7 @@ async function boot() {
       const delay = (on ? i : n - 1 - i) * 0.09;
       if (gsap && !reduceMotion) {
         gsap.to(e.obj.position, { x: to.x, y: to.y, z: to.z, duration: 1.1, delay, ease: "expo.inOut", overwrite: true, onUpdate: () => (shadowFrames = 2) });
+        wake(2500 + delay * 1000);
         if (e.fade) {
           if (!on) e.obj.visible = true;
           for (const { m, to } of fadeTo(e, on)) gsap.to(m, { opacity: to, duration: 0.5, delay, overwrite: true, onComplete: () => (e.obj.visible = !on) });
@@ -177,6 +183,7 @@ async function boot() {
   let power = 1; // eased 0..1
   function setPower(on) {
     powered = on;
+    wake(4000);
     const btn = stage.querySelector('[data-action="power"]');
     btn.textContent = on ? "Power off" : "Power on";
     btn.setAttribute("aria-pressed", String(!on));
@@ -234,6 +241,7 @@ async function boot() {
     return { pos: HOME_DIR.clone().multiplyScalar(homeDist * (on ? 1.55 : 1)).add(target), target };
   }
   function flyTo(pos, target) {
+    wake(1600);
     if (gsap && !reduceMotion) {
       gsap.to(camera.position, { x: pos.x, y: pos.y, z: pos.z, duration: 1.3, ease: "expo.inOut", overwrite: true });
       gsap.to(controls.target, { x: target.x, y: target.y, z: target.z, duration: 1.3, ease: "expo.inOut", overwrite: true });
@@ -315,7 +323,11 @@ async function boot() {
       });
     hoverQueued = e;
   });
-  canvas.addEventListener("pointerdown", (e) => (downAt = [e.clientX, e.clientY]));
+  canvas.addEventListener("pointerdown", (e) => {
+    downAt = [e.clientX, e.clientY];
+    wake();
+  });
+  controls.addEventListener("change", () => wake(600));
   canvas.addEventListener("pointerup", (e) => {
     if (!downAt) return;
     const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
@@ -329,6 +341,11 @@ async function boot() {
   let visible = false;
   let active = false;
   let ready = false;
+  // Render every frame until this time (ms); after that the loop idles down
+  let activeUntil = 0;
+  function wake(ms = 3000) {
+    activeUntil = Math.max(activeUntil, performance.now() + ms);
+  }
   new IntersectionObserver(
     ([entry]) => {
       visible = entry.isIntersecting;
@@ -351,6 +368,7 @@ async function boot() {
       e.stopImmediatePropagation();
       if (!powered || e.repeat) return;
       pulse = Math.min(pulse + 0.8, 2.2);
+      wake(1500);
       hueKick = (hueKick + 0.137) % 1;
     },
     true
@@ -365,6 +383,7 @@ async function boot() {
     const { width, height } = stage.getBoundingClientRect();
     if (!width || !height) return;
     renderer.setSize(width, height, false);
+    if (ready) wake(500); // resizing clears the canvas, so draw again even if idle
     if (bloom) bloom.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -382,6 +401,32 @@ async function boot() {
   let lastTime = 0;
   let running = false;
   let frameNo = 0;
+  let occlusionLeft = PARTS.length;
+  let occlusionNext = 0;
+
+  // Adaptive resolution: while things are moving, average the frame time; if a machine can't
+  // keep ~40 fps, drop the render resolution a step, and step back up once it's comfortably fast.
+  let win = 0;
+  let winN = 0;
+  let fastWins = 0;
+  let settle = 60; // ignore the first frames (shader warm-up, texture uploads)
+  function adapt(ms) {
+    if (settle > 0) return void settle--;
+    win += ms;
+    if (++winN < 45) return;
+    const avg = win / winN;
+    win = winN = 0;
+    if (avg > 1000 / 38 && quality < PR_STEPS.length - 1) setQuality(quality + 1);
+    else if (avg < 1000 / 57 && quality > 0 && ++fastWins >= 4) setQuality(quality - 1);
+    else if (avg >= 1000 / 57) fastWins = 0;
+  }
+  function setQuality(q) {
+    quality = q;
+    fastWins = 0;
+    settle = 20;
+    renderer.setPixelRatio(PR_STEPS[q]);
+    resize();
+  }
   const { width: w0 } = stage.getBoundingClientRect();
   let stageW = w0;
   let stageH = 1;
@@ -400,7 +445,8 @@ async function boot() {
         return;
       }
       const now = performance.now();
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      const raw = now - lastTime;
+      const dt = Math.min(raw / 1000, 0.05);
       lastTime = now;
       const t = now / 1000;
       controls.update();
@@ -411,6 +457,18 @@ async function boot() {
       if (!reduceMotion)
         for (const f of pc.fans) f.rotor.rotation.z += f.speed * power * dt;
       pulse *= Math.exp(-dt * 3.2);
+
+      // Skip work nobody would see: with the fans stopped and nothing moving the image is
+      // static, and after a few seconds without interaction the spinning fans render at 30 fps.
+      const busy = now < activeUntil;
+      const animated = !reduceMotion && power > 0.01;
+      frameNo++;
+      if (!busy && (!animated || frameNo % 2)) {
+        requestAnimationFrame(frame);
+        return;
+      }
+      if (busy) adapt(raw);
+
       const lit = powered ? 1 : 0;
       for (const m of pc.rgbMats) {
         const hue = reduceMotion ? 0.58 : (t * 0.05 + m.userData.offset + hueKick) % 1;
@@ -425,16 +483,21 @@ async function boot() {
       if (bloom) bloom.render(scene, camera, power * (1 + pulse * 0.6));
       else renderer.render(scene, camera);
 
-      // position the HTML hotspots over their 3D anchors; every few frames, dim the
-      // ones whose part is hidden behind another part
-      frameNo++;
-      const checkOcclusion = frameNo % 8 === 0;
+      // Position the HTML hotspots over their 3D anchors (only touching the DOM when they
+      // move), and re-check one hotspot per frame for being hidden behind another part.
+      if (busy) occlusionLeft = PARTS.length;
+      const check = occlusionLeft > 0 ? occlusionNext++ % PARTS.length : -1;
+      if (check >= 0) occlusionLeft--;
       PARTS.forEach((p, i) => {
         anchorWorld(p.id, tmp);
-        if (checkOcclusion) hotspots[i].classList.toggle("is-occluded", occluded(p.id, tmp));
+        if (i === check) hotspots[i].classList.toggle("is-occluded", occluded(p.id, tmp));
         tmp.project(camera);
         const h = hotspots[i];
-        h.style.transform = `translate(${((tmp.x + 1) / 2) * stageW}px, ${((1 - tmp.y) / 2) * stageH}px)`;
+        const tf = `translate(${(((tmp.x + 1) / 2) * stageW).toFixed(1)}px, ${(((1 - tmp.y) / 2) * stageH).toFixed(1)}px)`;
+        if (tf !== h.dataset.tf) {
+          h.style.transform = tf;
+          h.dataset.tf = tf;
+        }
         h.classList.toggle("is-hidden", tmp.z > 1 || Math.abs(tmp.x) > 1.05 || Math.abs(tmp.y) > 1.05);
       });
 
@@ -459,6 +522,7 @@ async function boot() {
   }
   ready = true;
   shadowFrames = 2;
+  wake(3000);
   stage.classList.add("is-ready");
   if (visible) loop();
 }

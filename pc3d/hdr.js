@@ -35,6 +35,8 @@ export async function loadHDR(THREE, url) {
   const data = new Uint16Array(w * h * 4);
   const one = toHalf(1);
   for (let y = 0; y < h; y++) {
+    // decode in slices so the page stays responsive
+    if (y % 96 === 95) await new Promise((r) => setTimeout(r, 0));
     if (b[p] === 2 && b[p + 1] === 2 && ((b[p + 2] << 8) | b[p + 3]) === w) {
       // new-style run-length encoded scanline, one channel at a time
       p += 4;

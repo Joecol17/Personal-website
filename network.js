@@ -81,7 +81,14 @@
       d = `M ${x1} ${A.y} C ${mx} ${A.y}, ${mx} ${B.y}, ${x2} ${B.y}`;
     }
     const path = el("path", { d, class: "net-link" }, linkLayer);
-    return { a, b, path, len: path.getTotalLength() };
+    const len = path.getTotalLength();
+    // sample the curve once so packets don't query SVG geometry every frame
+    const pts = [];
+    for (let i = 0; i <= 64; i++) {
+      const pt = path.getPointAtLength((i / 64) * len);
+      pts.push(pt.x, pt.y);
+    }
+    return { a, b, path, len, pts };
   });
 
   // Nodes
@@ -188,9 +195,12 @@
     last = now;
     packets.forEach((p) => {
       p.t = (p.t + dt * p.speed * (220 / Math.max(120, p.link.len)) * 2.2) % 1;
-      const pt = p.link.path.getPointAtLength(p.t * p.link.len);
-      p.c.setAttribute("cx", pt.x);
-      p.c.setAttribute("cy", pt.y);
+      const f = p.t * 64;
+      const k = Math.min(63, Math.floor(f));
+      const u = f - k;
+      const q = p.link.pts;
+      p.c.setAttribute("cx", q[2 * k] + (q[2 * k + 2] - q[2 * k]) * u);
+      p.c.setAttribute("cy", q[2 * k + 1] + (q[2 * k + 3] - q[2 * k + 1]) * u);
       // fade in and out at the ends of each link
       p.c.style.opacity = Math.min(1, Math.min(p.t, 1 - p.t) * 8);
       p.c.classList.toggle("is-lit", p.link.path.classList.contains("is-lit"));

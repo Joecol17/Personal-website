@@ -29,7 +29,11 @@ export const LAYOUT = {
 const bz = (u) => BOARD_REAR + u;
 const by = (v) => BOARD_TOP - v;
 
-export function buildPC(THREE, G, T, { hi }) {
+// Give the browser a chance to handle input/scrolling between chunks of work
+export const pause = () =>
+  window.scheduler && window.scheduler.yield ? window.scheduler.yield() : new Promise((r) => setTimeout(r, 0));
+
+export async function buildPC(THREE, G, T, { hi }) {
   const K = hi ? 3 : 2; // bevel segments
   const root = new THREE.Group();
   const parts = {};
@@ -118,7 +122,10 @@ export function buildPC(THREE, G, T, { hi }) {
     parent.add(g);
     return g;
   };
-  const anchor = (id, obj, at) => (anchors[id] = [obj, at]);
+  const anchor = (id, obj, at) => {
+    obj.userData.keep = true; // referenced at runtime, so never merged away
+    anchors[id] = [obj, at];
+  };
 
   // A 120 mm-class fan: frame, struts, hub and swept blades. Axis along local +Z.
   const bladeGeoCache = {};
@@ -144,6 +151,7 @@ export function buildPC(THREE, G, T, { hi }) {
       }
     }
     const rotor = new THREE.Group();
+    rotor.userData.keep = true;
     rotor.position.z = depth * 0.08;
     g.add(rotor);
     mesh(G.lathe([[0, depth * 0.36], [hub * 0.7, depth * 0.34], [hub, depth * 0.22], [hub, -depth * 0.36], [0, -depth * 0.36]], 40), M.fanBlack, rotor, [0, 0, 0], [Math.PI / 2, 0, 0]);
@@ -162,6 +170,7 @@ export function buildPC(THREE, G, T, { hi }) {
     return g;
   }
 
+  await pause();
   // ================= CASE =================
   const caseG = group(root, "case");
   const FLOOR = 14;
@@ -231,6 +240,7 @@ export function buildPC(THREE, G, T, { hi }) {
   for (const m of [...glassSide.children, ...glassFront.children]) m.castShadow = false;
   anchor("case", caseG, [-HW + 20, TOP - 30, HD - 20]);
 
+  await pause();
   // ================= MOTHERBOARD =================
   const mobo = group(root, "motherboard");
   // standoffs (brass, 6.35 mm) at the ATX hole positions
@@ -242,6 +252,7 @@ export function buildPC(THREE, G, T, { hi }) {
   // PCB: edge body + textured component side
   box(PCB_X, PCB_X + PCB_T, by(305), BOARD_TOP, BOARD_REAR, bz(244), M.pcbEdge, mobo);
   const pcbMat = std(0xcfd3d8, { map: T.pcb(LAYOUT), roughness: 0.42, metalness: 0.05 });
+  await pause();
   const pcbFace = mesh(new THREE.PlaneGeometry(244, 305), pcbMat, mobo, [PCB_X - 0.02, by(152.5), bz(122)], [0, -Math.PI / 2, 0]);
   pcbFace.castShadow = false;
   const onBoard = (u0, u1, v0, v1, h, r, mat, lift = 0, parent = mobo) => rbox(PCB_X - lift - h, PCB_X - lift, by(v1), by(v0), bz(u0), bz(u1), r, mat, parent);
@@ -297,6 +308,7 @@ export function buildPC(THREE, G, T, { hi }) {
   for (let i = 0; i < 6; i++) mesh(new THREE.CylinderGeometry(3, 3, 9, 16), M.gold, mobo, [PCB_X - 4.5, by(200 + (i % 3) * 9), bz(14 + Math.floor(i / 3) * 9)], [0, 0, Math.PI / 2]);
   anchor("motherboard", mobo, [PCB_X - 4, by(166), bz(214)]);
 
+  await pause();
   // ================= CPU =================
   const cpu = group(root, "cpu");
   const ihs = new THREE.Group();
@@ -316,6 +328,7 @@ export function buildPC(THREE, G, T, { hi }) {
   mesh(new THREE.PlaneGeometry(33, 33), ihsTop, ihs, [-2.45, 0, 0], [0, -Math.PI / 2, 0]);
   anchor("cpu", ihs, [-3, 0, 0]);
 
+  await pause();
   // ================= MEMORY (A2 + B2) =================
   const ram = group(root, "ram");
   const ramSide = std(0xffffff, { map: T.ramLabel, roughness: 0.55, metalness: 0.3 });
@@ -337,6 +350,7 @@ export function buildPC(THREE, G, T, { hi }) {
   }
   anchor("ram", sticks[1], [-38, 50, 0]);
 
+  await pause();
   // ================= M.2 SSD (under the M2A heatsink) =================
   const ssd = group(root, "ssd");
   const ssdBoard = new THREE.Group();
@@ -356,6 +370,7 @@ export function buildPC(THREE, G, T, { hi }) {
   mesh(G.merge(finsM2), M.iceSilver, m2Sink);
   anchor("ssd", ssdBoard, [-3, 0, 50]);
 
+  await pause();
   // ================= CPU COOLER: ID-COOLING FX360 PRO =================
   const cooler = group(root, "cooler");
   // pump / waterblock 72 x 72 x 50 mm
@@ -401,6 +416,7 @@ export function buildPC(THREE, G, T, { hi }) {
   const tubeGeo = G.merge([-1, 1].map((s) => G.tube(tubePts(s), 5.8, hi ? 90 : 50, hi ? 16 : 10, 1 / 10)));
   mesh(tubeGeo, M.tubeSleeve, cooler);
 
+  await pause();
   // ================= GPU: RTX PRO 6000 Blackwell Workstation Edition (vertical) =================
   // 304 x 137 x 40 mm, fans facing the side glass
   const gpu = group(root, "gpu");
@@ -450,6 +466,7 @@ export function buildPC(THREE, G, T, { hi }) {
   rbox(gCx - 4, gCx + 8, GY1 - 1, GY1 + 7, gCz - 22, gCz - 2, 1, M.blackPlastic, gpu);
   anchor("gpu", gpu, [GX0 - 4, GY1 - 18, fanZ[1]]);
 
+  await pause();
   // ================= RISER: Lian Li PCIe 5.0 x16 =================
   const riser = group(root, "riser");
   const slotY = by(LAYOUT.slotV[1]);
@@ -475,6 +492,7 @@ export function buildPC(THREE, G, T, { hi }) {
   mesh(ribbonGeo, M.ribbon, riser, [0, 0, (rz0 + rz1) / 2]);
   anchor("riser", riser, [-40, slotY - 40, rz1 + 2]);
 
+  await pause();
   // ================= PSU: Lian Li EDGE GOLD 1000 W (back chamber) =================
   // 182 (D) x 86 (W) x 150 (H) mm, fan facing the perforated side panel
   const psu = group(root, "psu");
@@ -505,6 +523,7 @@ export function buildPC(THREE, G, T, { hi }) {
   mesh(new THREE.PlaneGeometry(110, 27), std(0xffffff, { map: T.psuLabel, roughness: 0.45 }), psu, [PX0 - 0.1, PY0 + 30, (PZ0 + PZ1) / 2], [0, -Math.PI / 2, 0]);
   anchor("psu", psu, [PX0 - 4, PY1 - 30, PZ1 - 30]);
 
+  await pause();
   // ================= HDD: Seagate BarraCuda 4 TB, 3.5" (back chamber drive cage) =================
   const hdd = group(root, "hdd");
   const cage = new THREE.Group();
@@ -522,6 +541,7 @@ export function buildPC(THREE, G, T, { hi }) {
   box(DX0 + 2, DX0 + 24, FLOOR + 6, FLOOR + 9, HZ0 + 12, HZ0 + 150, M.pcbGreenDark, drive);
   anchor("hdd", drive, [DX0 - 4, FLOOR + 90, HZ0 + 40]);
 
+  await pause();
   // ================= CABLES (braided, from the EDGE GOLD) =================
   const cables = group(root, "cables");
   const plug = (x0, x1, y0, y1, z0, z1) => rbox(x0, x1, y0, y1, z0, z1, 1.2, M.cablePlastic, cables, 1);
@@ -585,6 +605,7 @@ export function buildPC(THREE, G, T, { hi }) {
   mesh(G.bundle(sataPwr, { rows: 1, cols: 5, r: 1.1, pitch: 2.6, segments: 30, radial: 6, across: new THREE.Vector3(1, 0, 0), uvScale: 1 / 6 }), M.sleeve, cables);
   anchor("cables", cables, [PCB_X - 44, atxY + 18, bz(247)]);
 
+  await pause();
   // ---------------- Exploded view offsets (mm), in build order ----------------
   const explode = [
     { obj: cpu, off: [-70, 30, 0] },
@@ -608,5 +629,59 @@ export function buildPC(THREE, G, T, { hi }) {
   contact.position.y = 0.2;
   root.add(contact);
 
+  for (const e of explode) e.obj.userData.keep = true;
+  const drawCallsBefore = countMeshes(root);
+  // merge one part at a time, yielding in between
+  for (const child of [...root.children]) {
+    if (!child.userData.keep) continue;
+    await pause();
+    mergeStatic(THREE, G, child);
+  }
+  await pause();
+  mergeStatic(THREE, G, root);
+  root.userData.drawCalls = [drawCallsBefore, countMeshes(root)];
+
   return { root, parts, anchors, fans, rgbMats, explode, M, gpuFans, radFans };
+}
+
+const countMeshes = (o) => {
+  let n = 0;
+  o.traverse((c) => c.isMesh && n++);
+  return n;
+};
+
+// Bake every mesh that never moves on its own into one mesh per material, per moving
+// group (parts that explode, fan rotors, anchors). Same picture, far fewer draw calls
+// in both the main and shadow passes.
+function mergeStatic(THREE, G, container) {
+  if (container.userData.merged) return;
+  container.userData.merged = true;
+  container.updateMatrixWorld(true);
+  const inv = container.matrixWorld.clone().invert();
+  const buckets = new Map();
+  const m = new THREE.Matrix4();
+  const visit = (obj) => {
+    for (const child of [...obj.children]) {
+      if (child.userData.keep) {
+        mergeStatic(THREE, G, child);
+      } else if (child.isMesh) {
+        const key = `${child.material.uuid}|${child.castShadow}|${child.receiveShadow}|${child.renderOrder}`;
+        if (!buckets.has(key)) buckets.set(key, { src: child, geos: [] });
+        m.multiplyMatrices(inv, child.matrixWorld);
+        buckets.get(key).geos.push(child.geometry.clone().applyMatrix4(m));
+        child.removeFromParent();
+      } else {
+        visit(child);
+        if (!child.children.length) child.removeFromParent();
+      }
+    }
+  };
+  visit(container);
+  for (const { src, geos } of buckets.values()) {
+    const mesh = new THREE.Mesh(geos.length > 1 ? G.merge(geos) : geos[0], src.material);
+    mesh.castShadow = src.castShadow;
+    mesh.receiveShadow = src.receiveShadow;
+    mesh.renderOrder = src.renderOrder;
+    container.add(mesh);
+  }
 }

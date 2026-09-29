@@ -246,7 +246,11 @@ function init() {
   let x = 0;
   let dir = 1;
   window.addEventListener("resize", () => (half = track.scrollWidth / 2));
+  // only move it while it's on screen
+  let marqueeOn = true;
+  new IntersectionObserver(([e]) => (marqueeOn = e.isIntersecting)).observe(track);
   gsap.ticker.add((time, dt) => {
+    if (!marqueeOn) return;
     const v = lenis.velocity || 0;
     if (Math.abs(v) > 0.1) dir = Math.sign(v);
     const speed = 0.06 + Math.min(Math.abs(v) * 0.025, 1.2);
