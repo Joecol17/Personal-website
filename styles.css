@@ -171,6 +171,7 @@ p { margin: 0 0 1rem; }
 
 /* Education & projects */
 .edu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.card-wide { grid-column: 1 / -1; }
 .grade-list { margin-top: 16px; display: grid; gap: 6px; }
 .grade-list-cols { grid-template-columns: 1fr 1fr; column-gap: 20px; }
 .grade-list li {
