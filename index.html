@@ -9,11 +9,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Enable animations only when JS runs and the user hasn't asked for reduced motion
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("anim");
+  </script>
 </head>
 <body>
+  <!-- Preloader -->
+  <div class="preloader" aria-hidden="true">
+    <div class="preloader-inner container">
+      <p class="preloader-line mono"><span>Joseph Collyer</span></p>
+      <p class="preloader-line mono"><span>Portfolio — Season 2026</span></p>
+      <p class="preloader-line mono"><span>Lightwater, UK</span></p>
+      <div class="preloader-count"><span class="count-num">000</span></div>
+    </div>
+    <div class="preloader-bar"></div>
+  </div>
+
+  <!-- Custom cursor -->
+  <div class="cursor" aria-hidden="true"><span class="cursor-label">View</span></div>
+
+  <!-- Grid overlay (toggle with the Grid button or the G key) -->
+  <div class="grid-overlay" aria-hidden="true">
+    <div class="container grid-cols">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
   <header class="site-header">
     <nav class="nav container">
       <a href="#top" class="logo">JC<span>.</span></a>
+      <button class="grid-toggle mono" aria-pressed="false" title="Show layout grid (G)">
+        <span class="grid-toggle-dot"></span>Grid <span class="grid-state">off</span>
+      </button>
       <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
         <span></span><span></span>
       </button>
@@ -32,8 +61,8 @@
     <!-- Hero -->
     <section class="hero container">
       <p class="mono eyebrow">&gt; hello, world</p>
-      <h1>Joseph Collyer</h1>
-      <p class="hero-sub">
+      <h1 class="hero-title"><span class="hero-line">Joseph</span><span class="hero-line hero-line-indent">Collyer</span></h1>
+      <p class="hero-sub" data-split>
         T Level student in <strong>Digital Production, Design &amp; Development</strong>
         at Farnborough College of Technology, with a love for creative problem-solving,
         design and taking computers apart to see how they work.
@@ -43,22 +72,38 @@
         <span>🎓 Farnborough College of Technology</span>
       </p>
       <div class="hero-actions">
-        <a href="#contact" class="btn btn-primary">Get in touch</a>
-        <a href="#experience" class="btn btn-ghost">See my experience</a>
+        <a href="#contact" class="btn btn-primary magnetic">Get in touch</a>
+        <a href="#experience" class="btn btn-ghost magnetic">See my experience</a>
       </div>
+      <a href="#about" class="scroll-hint mono" aria-label="Scroll to About">
+        <span>Scroll</span><span class="scroll-hint-line"></span>
+      </a>
     </section>
+
+    <!-- Marquee -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>Python</span><span class="marquee-star">✦</span>
+        <span>JavaScript</span><span class="marquee-star">✦</span>
+        <span>HTML &amp; CSS</span><span class="marquee-star">✦</span>
+        <span>Ethical Hacking</span><span class="marquee-star">✦</span>
+        <span>PC Building</span><span class="marquee-star">✦</span>
+        <span>IT Essentials</span><span class="marquee-star">✦</span>
+        <span>Digital Design</span><span class="marquee-star">✦</span>
+      </div>
+    </div>
 
     <!-- About -->
     <section id="about" class="section container reveal">
       <h2 class="section-title"><span class="mono">01.</span> About me</h2>
       <div class="about-grid">
         <div class="about-text">
-          <p>
+          <p data-split>
             I'm a self-motivated T Level student with a strong interest in creative
             problem-solving, design and technology. My studies cover software engineering,
             and I have intermediate knowledge of Python, HTML, CSS and JavaScript.
           </p>
-          <p>
+          <p data-split>
             Working at Waitrose has strengthened my communication, teamwork and organisation
             in a real workplace, and my industry placement at a data centre gave me hands-on
             experience with the infrastructure behind the internet. I'm keen to put both my
@@ -228,11 +273,11 @@
     <!-- Contact -->
     <section id="contact" class="section container reveal contact">
       <h2 class="section-title"><span class="mono">06.</span> Get in touch</h2>
-      <p class="contact-text">
+      <p class="contact-text" data-split>
         I'm open to opportunities in software, IT and digital design. Whether you have a
         role, a project or just want to say hi, my inbox is open.
       </p>
-      <a href="mailto:josephcollyer118@gmail.com" class="btn btn-primary btn-lg">Say hello</a>
+      <a href="mailto:josephcollyer118@gmail.com" class="btn btn-primary btn-lg magnetic">Say hello</a>
       <ul class="contact-links">
         <li><a href="mailto:josephcollyer118@gmail.com">josephcollyer118@gmail.com</a></li>
         <li><a href="https://www.credly.com/users/joe-collyer117c" target="_blank" rel="noopener">Credly</a></li>
@@ -245,6 +290,10 @@
     <p>© <span id="year"></span> Joseph Collyer · Built with HTML, CSS &amp; JavaScript</p>
   </footer>
 
+  <script src="vendor/gsap.min.js"></script>
+  <script src="vendor/ScrollTrigger.min.js"></script>
+  <script src="vendor/SplitText.min.js"></script>
+  <script src="vendor/lenis.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
