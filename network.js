@@ -172,7 +172,8 @@
   // Packets flow along every link towards Datum
   const packets = [];
   linkEls.forEach((l, i) => {
-    const count = l.b === "datum" ? 2 : 1;
+    const lite = window.perf && window.perf.tier === "low";
+    const count = l.b === "datum" && !lite ? 2 : 1;
     for (let k = 0; k < count; k++) {
       const c = el("circle", { r: 3.2, class: "net-packet" }, packetLayer);
       packets.push({ link: l, c, t: (i * 0.37 + k * 0.5) % 1, speed: 0.12 + ((i * 7) % 5) * 0.02 });

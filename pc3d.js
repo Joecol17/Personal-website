@@ -28,6 +28,7 @@ function fallback() {
 }
 
 let started = false;
+let panelPos = -1; // part shown in the side panel before the 3D model is loaded
 function start() {
   if (started) return;
   started = true;
@@ -37,15 +38,40 @@ function start() {
     fallback();
   });
 }
+// Performance tier from perf.js ("high" | "mid" | "low")
+const perf = window.perf;
+const tierNow = () => (perf ? perf.tier : "high");
+
 const io = new IntersectionObserver((entries) => entries[0].isIntersecting && start(), { rootMargin: "1200px 0px" });
-if (stage) {
+if (stage && perf && perf.gpu.renderer === "none") {
+  // no WebGL at all: go straight to the fallback message
+  fallback();
+} else if (stage && perf && perf.gpu.software && !perf.override) {
+  // Software-rendered graphics would make the whole page crawl while the model is on
+  // screen, so it only loads when asked for
+  stage.classList.add("is-manual");
+  // until then the side panel still steps through the parts
+  const panelOnly = new AbortController();
+  const on = { signal: panelOnly.signal };
+  panel.querySelector('[data-action="prev"]').addEventListener("click", () => fillPanel((panelPos = panelPos < 1 ? PARTS.length - 1 : panelPos - 1)), on);
+  panel.querySelector('[data-action="next"]').addEventListener("click", () => fillPanel((panelPos = (panelPos + 1) % PARTS.length)), on);
+  stage.querySelector('[data-action="start"]').addEventListener("click", () => {
+    panelOnly.abort();
+    stage.classList.remove("is-manual");
+    start();
+  });
+} else if (stage) {
   io.observe(stage);
+  if (tierNow() === "low") {
+    // no background warm-up on low-end devices: load when the section gets close
+  } else {
   // warm up in the background once the page has settled, so it's ready before you scroll down
   // (after the hero entrance has played, and only when the browser is otherwise idle)
   const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
   const later = () => setTimeout(() => idle(start), 3500);
   if (document.readyState === "complete") later();
   else window.addEventListener("load", later, { once: true });
+  }
 }
 
 async function boot() {
@@ -59,23 +85,27 @@ async function boot() {
   ]);
   const gsap = window.gsap;
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const hi = !matchMedia("(max-width: 720px), (pointer: coarse)").matches;
+  const mobile = matchMedia("(max-width: 720px), (pointer: coarse)").matches;
+  const tier = tierNow();
+  // full-detail model only on the high tier; mid/low get the lighter geometry and textures
+  const hi = tier === "high" && !mobile;
   const canvas = stage.querySelector(".setup-canvas");
   const hotspotLayer = stage.querySelector(".setup-hotspots");
 
   // ---------- Renderer ----------
   let renderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: tier === "low", alpha: true, powerPreference: "high-performance" });
   } catch (e) {
     fallback();
     return;
   }
   // Resolution steps: full quality by default, stepping down only if frames run slow
-  const PR_MAX = Math.min(window.devicePixelRatio, hi ? 1.75 : 1.5);
+  const prCap = (t) => (t === "high" ? (mobile ? 1.5 : 1.75) : t === "mid" ? 1.25 : 1);
+  const PR_MAX = Math.min(window.devicePixelRatio, prCap("high"));
   const PR_STEPS = [PR_MAX, 1.5, 1.25, 1, 0.8].filter((v, i, a) => v <= PR_MAX && a.indexOf(v) === i);
-  let quality = 0;
-  renderer.setPixelRatio(PR_STEPS[0]);
+  let quality = Math.max(0, PR_STEPS.findIndex((v) => v <= prCap(tier)));
+  renderer.setPixelRatio(PR_STEPS[quality]);
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -85,7 +115,9 @@ async function boot() {
   renderer.shadowMap.autoUpdate = false;
 
   const canBloom = renderer.extensions.has("EXT_color_buffer_float") || renderer.extensions.has("EXT_color_buffer_half_float");
-  const bloom = canBloom ? createBloom(THREE, renderer, { levels: hi ? 5 : 3, samples: hi ? 4 : 2, strength: 0.9, threshold: 2.4 }) : null;
+  // the RGB glow is skipped on the low tier (and on GPUs without float render targets)
+  let useBloom = tier !== "low";
+  const bloom = canBloom && useBloom ? createBloom(THREE, renderer, { levels: hi ? 5 : 3, samples: hi ? 4 : 2, strength: 0.9, threshold: 2.4 }) : null;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
@@ -105,11 +137,11 @@ async function boot() {
   const key = new THREE.DirectionalLight(0xffffff, 2.2);
   key.position.set(-1.6, 0.75, 0.9);
   key.castShadow = true;
-  key.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024);
+  key.shadow.mapSize.set(tier === "high" ? 2048 : 1024, tier === "high" ? 2048 : 1024);
   Object.assign(key.shadow.camera, { left: -0.36, right: 0.36, top: 0.36, bottom: -0.36, near: 0.5, far: 3.5 });
   key.shadow.bias = -0.0004;
   key.shadow.normalBias = 0.0015;
-  key.shadow.radius = hi ? 4 : 2;
+  key.shadow.radius = tier === "high" ? 4 : tier === "mid" ? 2 : 1;
   scene.add(key);
   const envReady = loadHDR(THREE, "assets/studio_small_08_1k.hdr")
     .then((tex) => {
@@ -219,7 +251,7 @@ async function boot() {
   });
   panel.querySelector(".setup-panel-idx").textContent = `00 / ${PARTS.length}`;
 
-  let current = -1;
+  let current = panelPos;
   const tmp = new THREE.Vector3();
   function anchorWorld(id, out) {
     const [obj, at] = pc.anchors[id];
@@ -417,9 +449,19 @@ async function boot() {
     const avg = win / winN;
     win = winN = 0;
     if (avg > 1000 / 38 && quality < PR_STEPS.length - 1) setQuality(quality + 1);
-    else if (avg < 1000 / 57 && quality > 0 && ++fastWins >= 4) setQuality(quality - 1);
+    else if (avg < 1000 / 57 && quality > minQuality() && ++fastWins >= 4) setQuality(quality - 1);
     else if (avg >= 1000 / 57) fastWins = 0;
   }
+  // the tier caps how sharp it can go; adaptive resolution works below that cap
+  function minQuality() {
+    return Math.max(0, PR_STEPS.findIndex((v) => v <= prCap(tierNow())));
+  }
+  if (perf)
+    perf.onChange((t) => {
+      useBloom = t !== "low";
+      if (quality < minQuality()) setQuality(minQuality());
+      wake(500);
+    });
   function setQuality(q) {
     quality = q;
     fastWins = 0;
@@ -480,7 +522,7 @@ async function boot() {
         renderer.shadowMap.needsUpdate = true;
         shadowFrames--;
       }
-      if (bloom) bloom.render(scene, camera, power * (1 + pulse * 0.6));
+      if (bloom && useBloom) bloom.render(scene, camera, power * (1 + pulse * 0.6));
       else renderer.render(scene, camera);
 
       // Position the HTML hotspots over their 3D anchors (only touching the DOM when they

@@ -77,7 +77,7 @@
       "2024-26  t-level-digital-production       @farnborough-college",
       "2018-23  gcses                            @winston-churchill",
     ],
-    setup: ["cpu  gpu  ram  motherboard  psu  storage  fans  case  monitor  keyboard  mouse"],
+    setup: ["case  motherboard  cpu  cooler  ram  ssd  gpu  riser  psu  hdd  cables"],
   };
 
   const commands = {
@@ -179,6 +179,34 @@
         }
         await sleep(300);
         print('<span class="t-ok">destination reached: Apprentice Infrastructure Engineer @ Datum</span>');
+      },
+    },
+    quality: {
+      desc: "this device's performance tier (try: quality low)",
+      run(args) {
+        const perf = window.perf;
+        if (!perf) return print("quality: detection unavailable", "t-err");
+        const want = (args[0] || "").toLowerCase();
+        if (want) {
+          if (!["low", "mid", "high", "auto"].includes(want)) return print("usage: quality [low|mid|high|auto]", "t-err");
+          perf.setOverride(want === "auto" ? null : want);
+          print(`quality set to <span class="t-accent">${want}</span>, reloading…`, "t-ok");
+          return setTimeout(() => location.reload(), 700);
+        }
+        const gb = perf.memory ? `${perf.memory} GB+` : "not reported";
+        print(
+          [
+            `<span class="t-accent">Tier</span>:      ${perf.tier}${perf.override ? " (set manually)" : ""}`,
+            `<span class="t-accent">Detected</span>:  ${perf.detected}`,
+            `<span class="t-accent">CPU</span>:       ${perf.cores || "?"} threads`,
+            `<span class="t-accent">Memory</span>:    ${gb}`,
+            `<span class="t-accent">Graphics</span>:  ${esc(perf.gpu.renderer)} (${perf.gpu.class})`,
+            `<span class="t-accent">Why</span>:       ${perf.reasons.map(esc).join("; ")}`,
+            "",
+            '<span class="t-dim">high: everything on · mid: lighter 3D model · low: no smooth scroll,',
+            "custom cursor, blur or bloom. Change with: quality low|mid|high|auto</span>",
+          ].join("\n")
+        );
       },
     },
     neofetch: {

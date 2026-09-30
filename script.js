@@ -79,7 +79,55 @@ if (animate) {
 
 function init() {
   // ---------- Smooth scrolling ----------
-  const lenis = new Lenis({ lerp: 0.09 });
+  // Lenis on capable devices; plain native scrolling on the low performance tier (perf.js).
+  // Everything talks to `lenis` below, which forwards to whichever one is active, so the
+  // tier can drop mid-visit without breaking anything.
+  const lite = () => window.perf && window.perf.tier === "low";
+  const handlers = [];
+  let stopped = false;
+  const nativeScroller = () => ({
+    velocity: 0,
+    scrollTo(target, { offset = 0, immediate } = {}) {
+      const el = typeof target === "string" ? document.querySelector(target) : target;
+      const top = typeof target === "number" ? target : el ? el.getBoundingClientRect().top + scrollY + offset : 0;
+      window.scrollTo({ top, behavior: immediate ? "auto" : "smooth" });
+    },
+    start: () => (root.style.overflow = ""),
+    stop: () => (root.style.overflow = "hidden"),
+    raf() {},
+    on(ev, fn) {
+      if (ev === "scroll") addEventListener("scroll", () => fn({ velocity: 0 }), { passive: true });
+    },
+    destroy() {},
+  });
+  let impl = lite() ? nativeScroller() : new Lenis({ lerp: 0.09 });
+  const lenis = {
+    get velocity() {
+      return impl.velocity || 0;
+    },
+    scrollTo: (...a) => impl.scrollTo(...a),
+    start() {
+      stopped = false;
+      impl.start();
+    },
+    stop() {
+      stopped = true;
+      impl.stop();
+    },
+    raf: (t) => impl.raf(t),
+    on(ev, fn) {
+      handlers.push([ev, fn]);
+      impl.on(ev, fn);
+    },
+  };
+  if (window.perf)
+    window.perf.onChange(() => {
+      if (!lite() || !(impl instanceof Lenis)) return;
+      impl.destroy();
+      impl = nativeScroller();
+      handlers.forEach(([ev, fn]) => impl.on(ev, fn));
+      if (stopped) impl.stop();
+    });
   window.site.lenis = lenis;
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
@@ -262,7 +310,8 @@ function init() {
   const skew = gsap.quickTo(track, "skewX", { duration: 0.4, ease: "power3" });
   lenis.on("scroll", ({ velocity }) => skew(gsap.utils.clamp(-8, 8, -velocity * 0.25)));
 
-  if (!finePointer) return;
+  // custom cursor and magnetic buttons: mouse users, not on the low performance tier
+  if (!finePointer || lite()) return;
 
   // ---------- Custom cursor ----------
   const cursor = document.querySelector(".cursor");

@@ -17,6 +17,8 @@
     // Enable animations only when JS runs and the user hasn't asked for reduced motion
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("anim");
   </script>
+  <!-- Detect the device's performance tier before anything else runs -->
+  <script src="perf.js"></script>
 </head>
 <body>
   <!-- Preloader -->
@@ -307,6 +309,10 @@
           <canvas class="setup-canvas" aria-label="Interactive 3D model of my PC build in a Lian Li O11 Dynamic Mini V2 case"></canvas>
           <div class="setup-hotspots"></div>
           <p class="setup-loading mono">Booting setup…</p>
+          <div class="setup-start">
+            <button type="button" class="setup-btn" data-action="start">Load 3D model</button>
+            <p class="mono">Your browser is drawing 3D graphics in software, which is slow, so the model only loads if you ask. The parts list on the right works either way.</p>
+          </div>
           <p class="setup-fallback">Your browser can't show 3D here, but you can still browse the parts on the right.</p>
           <div class="setup-controls">
             <button type="button" class="setup-btn" data-action="explode" aria-pressed="false">Explode PC</button>
