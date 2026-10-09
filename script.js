@@ -306,29 +306,8 @@ function init() {
   const skew = gsap.quickTo(track, "skewX", { duration: 0.4, ease: "power3" });
   lenis.on("scroll", ({ velocity }) => skew(gsap.utils.clamp(-8, 8, -velocity * 0.25)));
 
-  // custom cursor and magnetic buttons: mouse users, not on the low performance tier
+  // magnetic buttons: mouse users, not on the low performance tier
   if (!finePointer || lite()) return;
-
-  // ---------- Custom cursor ----------
-  const cursor = document.querySelector(".cursor");
-  const label = cursor.querySelector(".cursor-label");
-  const cx = gsap.quickTo(cursor, "x", { duration: 0.25, ease: "power3" });
-  const cy = gsap.quickTo(cursor, "y", { duration: 0.25, ease: "power3" });
-  window.addEventListener("mousemove", (e) => {
-    cursor.classList.add("is-active");
-    cx(e.clientX);
-    cy(e.clientY);
-  });
-
-  document.querySelectorAll("a, button").forEach((el) => {
-    const text = el.classList.contains("cert") ? "View" : "";
-    el.addEventListener("mouseenter", () => {
-      label.textContent = text;
-      cursor.classList.add(text ? "is-label" : "is-hover");
-    });
-    el.addEventListener("mouseleave", () => cursor.classList.remove("is-hover", "is-label"));
-  });
-  document.documentElement.addEventListener("mouseleave", () => cursor.classList.remove("is-active"));
 
   // ---------- Magnetic buttons ----------
   document.querySelectorAll(".magnetic").forEach((btn) => {

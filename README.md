@@ -7,7 +7,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
 - `index.html`: page content (about, experience, education, skills, contact)
 - `styles.css`: styling, with automatic light/dark mode and a responsive layout
 - `perf.js`: picks a performance tier for the visitor's device before anything else loads (see below)
-- `script.js`: mobile menu and all animations (preloader, text reveals, smooth scroll, marquee, custom cursor, magnetic buttons, grid overlay)
+- `script.js`: mobile menu and all animations (preloader, text reveals, smooth scroll, marquee, magnetic buttons, grid overlay)
 - `terminal.js`: the hidden terminal (press **`** or click **>_** in the nav; try `help`, `neofetch`, `traceroute joseph`)
 - `network.js`: the interactive career network map in the Experience section
 - `pc3d.js`: the interactive 3D model of my PC, built with [three.js](https://threejs.org): drag to orbit, numbered hotspots with each part's real name and specs, an exploded view that takes the build apart in build order, a power switch for the fans and RGB, and typing pulses the motherboard RGB
@@ -40,7 +40,7 @@ Press **G** (or type `grid` in the terminal) to show the 12-column layout grid. 
 |------|--------------|
 | high | everything on |
 | mid | lighter 3D model: lower resolution and less detailed geometry, textures, bloom and shadows |
-| low | native scrolling instead of Lenis, no custom cursor or magnetic buttons, no frosted-glass blur, 3D without bloom, fewer network-map packets. If graphics are software-rendered, the 3D model only loads when the visitor clicks "Load 3D model" |
+| low | native scrolling instead of Lenis, no magnetic buttons, no frosted-glass blur, 3D without bloom, fewer network-map packets. If graphics are software-rendered, the 3D model only loads when the visitor clicks "Load 3D model" |
 
 After the intro animation it also watches about 2 seconds of frames and drops one tier for the rest of the visit if the page runs below ~38 fps. To test a tier, add `?quality=low`, `?quality=mid` or `?quality=high` to the URL (remembered until `?quality=auto`), or type `quality` in the site terminal.
 
