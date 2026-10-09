@@ -3,7 +3,7 @@
 //
 //   high: everything on
 //   mid:  lighter 3D model (lower resolution, lighter bloom and shadows)
-//   low:  no smooth-scroll library, custom cursor or frosted-glass blur; 3D without bloom,
+//   low:  no smooth-scroll library, magnetic buttons or frosted-glass blur; 3D without bloom,
 //         and on software-rendered graphics the 3D model only loads when asked for
 //
 // Signals: CPU threads, device memory, the graphics chip WebGL reports, Save-Data / slow

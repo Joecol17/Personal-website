@@ -204,7 +204,7 @@
             `<span class="t-accent">Why</span>:       ${perf.reasons.map(esc).join("; ")}`,
             "",
             '<span class="t-dim">high: everything on · mid: lighter 3D model · low: no smooth scroll,',
-            "custom cursor, blur or bloom. Change with: quality low|mid|high|auto</span>",
+            "magnetic buttons, blur or bloom. Change with: quality low|mid|high|auto</span>",
           ].join("\n")
         );
       },

@@ -253,27 +253,6 @@ html.lenis, html.lenis body { height: auto; }
 .count-num { display: inline-block; }
 .preloader-bar { height: 3px; background: var(--accent); transform-origin: left; transform: scaleX(0); }
 
-/* Custom cursor (mouse only) */
-.cursor { display: none; }
-@media (hover: hover) and (pointer: fine) {
-  .anim .cursor {
-    display: grid; place-items: center;
-    position: fixed; top: 0; left: 0; z-index: 90;
-    width: 12px; height: 12px; margin: -6px 0 0 -6px;
-    border-radius: 50%; background: #fff; mix-blend-mode: difference;
-    pointer-events: none; will-change: transform; opacity: 0;
-    transition: width .3s, height .3s, margin .3s, opacity .3s;
-  }
-  .anim .cursor.is-active { opacity: 1; }
-  .anim .cursor.is-hover { width: 64px; height: 64px; margin: -32px 0 0 -32px; }
-  .anim .cursor.is-label { width: 88px; height: 88px; margin: -44px 0 0 -44px; }
-  .cursor-label {
-    font-family: "JetBrains Mono", monospace; font-size: 0.72rem; text-transform: uppercase;
-    color: #000; opacity: 0; transition: opacity .2s;
-  }
-  .cursor.is-label .cursor-label { opacity: 1; }
-}
-
 /* Grid overlay */
 .grid-overlay { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
 .grid-cols { height: 100%; display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
@@ -287,16 +266,6 @@ html.lenis, html.lenis body { height: auto; }
   .grid-cols { grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .grid-cols span:nth-child(n+5) { display: none; }
 }
-.grid-toggle {
-  display: inline-flex; align-items: center; gap: 8px; margin-right: auto; margin-left: 24px;
-  background: none; border: 1px solid var(--border); color: var(--muted);
-  padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; cursor: pointer;
-  text-transform: uppercase; letter-spacing: .05em;
-}
-.grid-toggle:hover { color: var(--text); border-color: var(--text); }
-.grid-toggle-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .2s; }
-.grid-toggle[aria-pressed="true"] { color: #ff3b3b; border-color: #ff3b3b; }
-.grid-toggle[aria-pressed="true"] .grid-toggle-dot { background: #ff3b3b; }
 
 /* Nav link text roll on hover */
 .roll { display: inline-block; overflow: hidden; vertical-align: top; height: 1.65em; }
@@ -363,7 +332,7 @@ a:hover .roll-inner { transform: translateY(-50%); }
   .nav-toggle[aria-expanded="true"] span:first-child { transform: translateY(4px) rotate(45deg); }
   .nav-toggle[aria-expanded="true"] span:last-child { transform: translateY(-4px) rotate(-45deg); }
   .grade-list-cols { grid-template-columns: 1fr; }
-  .grid-toggle { margin-left: 16px; }
+  .term-toggle { margin-left: 16px; }
   .scroll-hint { display: none; }
   .section-title { font-size: 1.6rem; }
 }
@@ -373,11 +342,10 @@ a:hover .roll-inner { transform: translateY(-50%); }
    ========================================================= */
 .term-toggle {
   background: none; border: 1px solid var(--border); color: var(--muted);
-  width: 34px; height: 28px; border-radius: 8px; margin-left: 8px; cursor: pointer;
+  width: 34px; height: 28px; border-radius: 8px; margin-left: 24px; cursor: pointer;
   font-size: 0.8rem; font-weight: 700;
 }
 .term-toggle:hover { color: var(--accent-2); border-color: var(--accent-2); }
-.grid-toggle { margin-right: 0; }
 .term-toggle { margin-right: auto; }
 
 .eyebrow-term {
@@ -583,7 +551,6 @@ body.term-open { overflow: hidden; }
   .setup-stage { height: 440px; }
   .hotspot { width: 24px; height: 24px; margin: -12px 0 0 -12px; font-size: 0.6rem; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
   .setup-btn { padding: 6px 11px; font-size: 0.76rem; }
-  .term-toggle { margin-left: 6px; }
   .eyebrow-term { display: block; margin: 4px 0 0; }
 }
 
@@ -594,7 +561,6 @@ body.term-open { overflow: hidden; }
 [data-perf="low"] .site-header { backdrop-filter: none; background: color-mix(in srgb, var(--bg) 97%, transparent); }
 [data-perf="low"] .term { backdrop-filter: none; background: rgba(5, 8, 12, 0.8); }
 [data-perf="low"] .setup-btn { backdrop-filter: none; background: var(--card); }
-[data-perf="low"].anim .cursor { display: none; }
 .setup-start { display: none; }
 .setup-stage.is-manual .setup-start {
   position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;

@@ -7,7 +7,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
 - `index.html`: page content (about, experience, education, skills, contact)
 - `styles.css`: styling, with automatic light/dark mode and a responsive layout
 - `perf.js`: picks a performance tier for the visitor's device before anything else loads (see below)
-- `script.js`: mobile menu and all animations (preloader, text reveals, smooth scroll, marquee, custom cursor, magnetic buttons, grid overlay)
+- `script.js`: mobile menu and all animations (preloader, text reveals, smooth scroll, marquee, magnetic buttons, grid overlay)
 - `terminal.js`: the hidden terminal (press **`** or click **>_** in the nav; try `help`, `neofetch`, `traceroute joseph`)
 - `network.js`: the interactive career network map in the Experience section
 - `pc3d.js`: the interactive 3D model of my PC, built with [three.js](https://threejs.org): drag to orbit, numbered hotspots with each part's real name and specs, an exploded view that takes the build apart in build order, a power switch for the fans and RGB, and typing pulses the motherboard RGB
@@ -18,6 +18,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
   - `hdr.js`, `bloom.js`: a small Radiance `.hdr` loader for the studio lighting, and the HDR bloom pass
   - `sched.js`: spreads the model's set-up over the page's spare time (see "Loading the 3D model" below)
 - `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`: site icons
+- `og-image.png`: the 1200×630 preview image shown when the link is shared (LinkedIn, Slack, iMessage…). The link-preview tags in `index.html` use the full `https://joecol17.github.io/Personal-website/` address, so update them if the site moves to its own domain
 - `vendor/`: local copies of [GSAP](https://gsap.com) (with ScrollTrigger and SplitText), [Lenis](https://lenis.darkroom.engineering) smooth scroll, and a trimmed three.js r186 build (`three.bundle.min.js`, loaded only when the 3D section is near)
 - `assets/studio_small_08_1k.hdr`: studio lighting for the 3D model
 
@@ -29,7 +30,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
 esbuild entry.js --bundle --minify --format=esm --legal-comments=inline --outfile=vendor/three.bundle.min.js
 ```
 
-Press **G** (or click the Grid button in the nav) to show the 12-column layout grid. Animations are switched off automatically for visitors who have reduced motion enabled.
+Press **G** (or type `grid` in the terminal) to show the 12-column layout grid. Animations are switched off automatically for visitors who have reduced motion enabled.
 
 ## Performance tiers
 
@@ -39,7 +40,7 @@ Press **G** (or click the Grid button in the nav) to show the 12-column layout g
 |------|--------------|
 | high | everything on |
 | mid | lighter 3D model: lower resolution and less detailed geometry, textures, bloom and shadows |
-| low | native scrolling instead of Lenis, no custom cursor or magnetic buttons, no frosted-glass blur, 3D without bloom, fewer network-map packets. If graphics are software-rendered, the 3D model only loads when the visitor clicks "Load 3D model" |
+| low | native scrolling instead of Lenis, no magnetic buttons, no frosted-glass blur, 3D without bloom, fewer network-map packets. If graphics are software-rendered, the 3D model only loads when the visitor clicks "Load 3D model" |
 
 After the intro animation it also watches about 2 seconds of frames and drops one tier for the rest of the visit if the page runs below ~38 fps. To test a tier, add `?quality=low`, `?quality=mid` or `?quality=high` to the URL (remembered until `?quality=auto`), or type `quality` in the site terminal.
 
