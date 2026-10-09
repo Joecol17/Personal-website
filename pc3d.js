@@ -1,8 +1,11 @@
 // Interactive 3D model of my PC, built part by part in code at real-world dimensions.
 // Orbit it, inspect each part, explode it in build order, and power it off.
-// three.js (and the studio HDRI) are only downloaded once the section gets close to the screen.
+// Set-up starts during the preloader and is spread over the page's spare time (pc3d/sched.js),
+// so it's ready before you scroll down without the page ever stuttering; on the low tier it
+// waits until the section gets close.
 
 import { PARTS } from "./pc3d/parts.js";
+import { pause, calm, hurry } from "./pc3d/sched.js";
 
 const stage = document.querySelector(".setup-stage");
 const panel = document.querySelector(".setup-panel");
@@ -32,7 +35,6 @@ let panelPos = -1; // part shown in the side panel before the 3D model is loaded
 function start() {
   if (started) return;
   started = true;
-  io.disconnect();
   boot().catch((err) => {
     console.error(err);
     fallback();
@@ -42,7 +44,16 @@ function start() {
 const perf = window.perf;
 const tierNow = () => (perf ? perf.tier : "high");
 
-const io = new IntersectionObserver((entries) => entries[0].isIntersecting && start(), { rootMargin: "1200px 0px" });
+// Close to the section: stop waiting for idle time and finish as fast as possible
+const io = new IntersectionObserver(
+  (entries) => {
+    if (!entries[0].isIntersecting) return;
+    io.disconnect();
+    hurry();
+    start();
+  },
+  { rootMargin: "1200px 0px" }
+);
 if (stage && perf && perf.gpu.renderer === "none") {
   // no WebGL at all: go straight to the fallback message
   fallback();
@@ -58,20 +69,15 @@ if (stage && perf && perf.gpu.renderer === "none") {
   stage.querySelector('[data-action="start"]').addEventListener("click", () => {
     panelOnly.abort();
     stage.classList.remove("is-manual");
+    hurry();
     start();
   });
 } else if (stage) {
   io.observe(stage);
-  if (tierNow() === "low") {
-    // no background warm-up on low-end devices: load when the section gets close
-  } else {
-  // warm up in the background once the page has settled, so it's ready before you scroll down
-  // (after the hero entrance has played, and only when the browser is otherwise idle)
-  const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
-  const later = () => setTimeout(() => idle(start), 3500);
-  if (document.readyState === "complete") later();
-  else window.addEventListener("load", later, { once: true });
-  }
+  // no background warm-up on low-end devices: load when the section gets close.
+  // Everywhere else start straight away, during the preloader: the files download while the
+  // intro plays, and every step after that waits for an idle gap between frames.
+  if (tierNow() !== "low") start();
 }
 
 async function boot() {
@@ -83,6 +89,7 @@ async function boot() {
     import("./pc3d/bloom.js"),
     import("./pc3d/hdr.js"),
   ]);
+  await pause();
   const gsap = window.gsap;
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobile = matchMedia("(max-width: 720px), (pointer: coarse)").matches;
@@ -119,18 +126,20 @@ async function boot() {
   let useBloom = tier !== "low";
   const bloom = canBloom && useBloom ? createBloom(THREE, renderer, { levels: hi ? 5 : 3, samples: hi ? 4 : 2, strength: 0.9, threshold: 2.4 }) : null;
 
+  await pause();
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
 
   // ---------- Model ----------
   const G = createGeo(THREE);
-  const T = createTextures(THREE, { hi });
+  const T = await createTextures(THREE, { hi });
   const pc = await buildPC(THREE, G, T, { hi });
   const MM = 0.001;
   const world = pc.root;
   world.scale.setScalar(MM);
   world.position.y = (-CASE.H / 2) * MM;
   scene.add(world);
+  await pause();
 
   // ---------- Lighting: studio HDRI for reflections + one shadow-casting key light ----------
   scene.add(new THREE.HemisphereLight(0xe8eef5, 0x1a1a1e, 0.35));
@@ -477,6 +486,12 @@ async function boot() {
     stageH = e.contentRect.height;
   }).observe(stage);
 
+  // the warm-up draws the same way as the real frames, so it builds the same shaders
+  function draw(glow) {
+    if (bloom && useBloom) bloom.render(scene, camera, glow);
+    else renderer.render(scene, camera);
+  }
+
   function loop() {
     if (running) return;
     running = true;
@@ -522,8 +537,7 @@ async function boot() {
         renderer.shadowMap.needsUpdate = true;
         shadowFrames--;
       }
-      if (bloom && useBloom) bloom.render(scene, camera, power * (1 + pulse * 0.6));
-      else renderer.render(scene, camera);
+      draw(power * (1 + pulse * 0.6));
 
       // Position the HTML hotspots over their 3D anchors (only touching the DOM when they
       // move), and re-check one hotspot per frame for being hidden behind another part.
@@ -551,17 +565,48 @@ async function boot() {
     if (!document.hidden && visible && ready) loop();
   });
 
-  // Nothing is drawn until the lighting is in and every shader is compiled. compileAsync
-  // uses parallel shader compilation where the GPU supports it, so the page stays responsive.
+  // ---------- Warm-up ----------
+  // Nothing is drawn until the lighting is in and everything is on the graphics card. Left to
+  // the first frame, that would all happen at once just as you scroll down to the section, so
+  // it's done here ahead of time, one small piece at a time with a pause in between: each
+  // texture, then each part's shaders, then one hidden frame for the shadows, bloom and the
+  // reflections. These steps wait until the intro and perf.js's frame-rate check are over.
   await envReady;
+  await calm();
   const loading = stage.querySelector(".setup-loading");
   if (loading) loading.textContent = "Warming up shaders…";
+  const textures = new Set();
+  scene.traverse((o) => {
+    for (const m of [].concat(o.material || []))
+      for (const v of Object.values(m)) if (v && v.isTexture) textures.add(v);
+  });
+  for (const t of textures) {
+    await pause();
+    renderer.initTexture(t);
+  }
+  const parts = [...world.children];
   try {
-    if (renderer.extensions.has("KHR_parallel_shader_compile")) await renderer.compileAsync(scene, camera);
-    else renderer.compile(scene, camera);
+    // compileAsync uses parallel shader compilation where the GPU supports it
+    for (const part of [...parts, scene]) {
+      await pause();
+      await renderer.compileAsync(part, camera, scene);
+    }
   } catch (e) {
     // shaders will compile on the first frame instead
   }
+  // Draw each part on its own once: uploads its geometry and builds its shadow shaders
+  const shown = parts.map((p) => p.visible);
+  for (const part of parts) {
+    await pause();
+    parts.forEach((p) => (p.visible = p === part));
+    renderer.shadowMap.needsUpdate = true;
+    draw(1);
+  }
+  parts.forEach((p, i) => (p.visible = shown[i]));
+  await pause();
+  renderer.shadowMap.needsUpdate = true;
+  draw(1);
+  await pause();
   ready = true;
   shadowFrames = 2;
   wake(3000);

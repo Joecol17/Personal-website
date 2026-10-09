@@ -1,6 +1,8 @@
 // Minimal Radiance .hdr (RGBE) loader. Returns a half-float equirectangular DataTexture;
 // the renderer pre-filters it (PMREM) automatically when used as scene.environment.
 
+import { pause } from "./sched.js";
+
 const f32 = new Float32Array(1);
 const u32 = new Uint32Array(f32.buffer);
 function toHalf(v) {
@@ -36,7 +38,7 @@ export async function loadHDR(THREE, url) {
   const one = toHalf(1);
   for (let y = 0; y < h; y++) {
     // decode in slices so the page stays responsive
-    if (y % 96 === 95) await new Promise((r) => setTimeout(r, 0));
+    if (y % 96 === 95) await pause();
     if (b[p] === 2 && b[p + 1] === 2 && ((b[p + 2] << 8) | b[p + 3]) === w) {
       // new-style run-length encoded scanline, one channel at a time
       p += 4;

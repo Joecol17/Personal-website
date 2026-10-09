@@ -16,6 +16,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
   - `parts.js`: the hotspot text and specs for each part
   - `geo.js`, `textures.js`: rounded boxes, tubes, cable bundles, fan blades, and canvas-drawn PCB, labels and brushed metal
   - `hdr.js`, `bloom.js`: a small Radiance `.hdr` loader for the studio lighting, and the HDR bloom pass
+  - `sched.js`: spreads the model's set-up over the page's spare time (see "Loading the 3D model" below)
 - `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`: site icons
 - `vendor/`: local copies of [GSAP](https://gsap.com) (with ScrollTrigger and SplitText), [Lenis](https://lenis.darkroom.engineering) smooth scroll, and a trimmed three.js r186 build (`three.bundle.min.js`, loaded only when the 3D section is near)
 - `assets/studio_small_08_1k.hdr`: studio lighting for the 3D model
@@ -41,6 +42,16 @@ Press **G** (or click the Grid button in the nav) to show the 12-column layout g
 | low | native scrolling instead of Lenis, no custom cursor or magnetic buttons, no frosted-glass blur, 3D without bloom, fewer network-map packets. If graphics are software-rendered, the 3D model only loads when the visitor clicks "Load 3D model" |
 
 After the intro animation it also watches about 2 seconds of frames and drops one tier for the rest of the visit if the page runs below ~38 fps. To test a tier, add `?quality=low`, `?quality=mid` or `?quality=high` to the URL (remembered until `?quality=auto`), or type `quality` in the site terminal.
+
+## Loading the 3D model
+
+The model is set up in the background so it's ready before you scroll down, without the page ever stuttering:
+
+1. **During the preloader**: the three.js files download and the model is built, one texture or part at a time, each step waiting for an idle gap between frames.
+2. **After the intro** (once `perf.js`'s frame-rate check is done, so it isn't thrown off): the graphics-card work, also one piece at a time: uploading each texture, compiling each part's shaders, and drawing each part once on its own.
+3. **When you scroll down**: everything is already on the graphics card, so the first frame is as quick as any other.
+
+If you scroll near the section before it's finished, it stops waiting for idle time and finishes as fast as it can. On the low tier none of this runs in the background: the model loads when you get close.
 
 ## Viewing locally
 
