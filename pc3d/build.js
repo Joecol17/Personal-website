@@ -2,6 +2,9 @@
 // Axes (case space): X = width (left glass at -X, back chamber at +X),
 // Y = up from the floor, Z = depth (front glass at +Z, rear I/O at -Z).
 
+// Work is split up with pause() so the page stays smooth while the model is built (see sched.js)
+import { pause } from "./sched.js";
+
 // Lian Li O11 Dynamic Mini V2: 423.6 (D) x 273.3 (W) x 391.95 (H) mm
 export const CASE = { W: 273.3, H: 391.95, D: 423.6 };
 const HW = CASE.W / 2;
@@ -29,9 +32,6 @@ export const LAYOUT = {
 const bz = (u) => BOARD_REAR + u;
 const by = (v) => BOARD_TOP - v;
 
-// Give the browser a chance to handle input/scrolling between chunks of work
-export const pause = () =>
-  window.scheduler && window.scheduler.yield ? window.scheduler.yield() : new Promise((r) => setTimeout(r, 0));
 
 export async function buildPC(THREE, G, T, { hi }) {
   const K = hi ? 3 : 2; // bevel segments

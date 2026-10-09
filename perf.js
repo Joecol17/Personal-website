@@ -127,14 +127,19 @@
   // ---------- Frame-rate check ----------
   // After the intro has played, watch ~2 s of frames. If the device clearly can't keep up,
   // drop one tier for the rest of the visit (never raise it automatically).
+  // perf.settled resolves once the intro and this check are over (pc3d.js saves its
+  // heaviest warm-up steps until then, so they neither stutter the intro nor skew the check)
+  let settle;
+  perf.settled = new Promise((r) => (settle = r));
   function probe() {
-    if (override || perf.tier === "low" || document.hidden) return;
+    if (override || perf.tier === "low" || document.hidden) return settle();
     const times = [];
     let last = performance.now();
     const step = (now) => {
       times.push(now - last);
       last = now;
       if (times.length < 120) return requestAnimationFrame(step);
+      settle();
       if (document.hidden) return;
       times.sort((a, b) => a - b);
       const median = times[times.length >> 1];

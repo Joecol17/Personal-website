@@ -1,7 +1,10 @@
 // Canvas-drawn textures: PCB with traces/silkscreen, brushed metal, cable sleeving,
 // perforated steel, radiator fins and product labels.
 
-export function createTextures(THREE, { hi }) {
+import { pause } from "./sched.js";
+
+// Drawn one at a time with a pause between each, so no single step takes long
+export async function createTextures(THREE, { hi }) {
   const make = (w, h, draw, { srgb = true, repeat } = {}) => {
     const cv = document.createElement("canvas");
     cv.width = w;
@@ -174,6 +177,7 @@ export function createTextures(THREE, { hi }) {
   }
 
   // brushed-metal roughness (grey levels) — used as roughnessMap
+  await pause();
   const brushed = make(
     512,
     512,
@@ -196,6 +200,7 @@ export function createTextures(THREE, { hi }) {
   );
 
   // braided sleeving (bump + colour), repeats along the cable
+  await pause();
   const sleeve = make(
     64,
     64,
@@ -252,6 +257,7 @@ export function createTextures(THREE, { hi }) {
   }
 
   // radiator core seen from the fan side: flat tubes with folded fins between them
+  await pause();
   const radCore = make(
     256,
     64,
@@ -278,6 +284,7 @@ export function createTextures(THREE, { hi }) {
     return make(w, h, draw);
   }
 
+  await pause();
   const hddLabel = label(512, 360, (c, W, H) => {
     c.fillStyle = "#d9dde1";
     c.fillRect(0, 0, W, H);
@@ -299,6 +306,7 @@ export function createTextures(THREE, { hi }) {
     for (let x = 300; x < 480; x += 5) c.fillRect(x, 250, (x * 7) % 3 + 1, 70);
   });
 
+  await pause();
   const ssdLabel = label(512, 128, (c, W, H) => {
     c.fillStyle = "#111317";
     c.fillRect(0, 0, W, H);
@@ -314,6 +322,7 @@ export function createTextures(THREE, { hi }) {
     c.fillText("PCIe Gen4 NVMe", W - 190, 100);
   });
 
+  await pause();
   const cpuIHS = label(256, 256, (c, W, H) => {
     const g = c.createLinearGradient(0, 0, W, H);
     g.addColorStop(0, "#d9dcdf");
@@ -331,6 +340,7 @@ export function createTextures(THREE, { hi }) {
     c.fillText("9950X", W / 2, 172);
   });
 
+  await pause();
   const psuLabel = label(512, 128, (c, W, H) => {
     c.fillStyle = "#16181b";
     c.fillRect(0, 0, W, H);
@@ -342,6 +352,7 @@ export function createTextures(THREE, { hi }) {
     c.fillText("1000W  GOLD", 200, 78);
   });
 
+  await pause();
   const gpuLabel = label(512, 64, (c, W, H) => {
     c.fillStyle = "#0e0f11";
     c.fillRect(0, 0, W, H);
@@ -351,6 +362,7 @@ export function createTextures(THREE, { hi }) {
     c.fillText("RTX PRO 6000", W / 2, 43);
   });
 
+  await pause();
   const ramLabel = label(512, 96, (c, W, H) => {
     c.fillStyle = "#111214";
     c.fillRect(0, 0, W, H);
@@ -371,6 +383,7 @@ export function createTextures(THREE, { hi }) {
   });
 
   // soft contact shadow under the case
+  await pause();
   const contact = make(256, 256, (c, W, H) => {
     const g = c.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W / 2);
     g.addColorStop(0, "rgba(0,0,0,0.55)");
