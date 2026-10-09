@@ -287,16 +287,6 @@ html.lenis, html.lenis body { height: auto; }
   .grid-cols { grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .grid-cols span:nth-child(n+5) { display: none; }
 }
-.grid-toggle {
-  display: inline-flex; align-items: center; gap: 8px; margin-right: auto; margin-left: 24px;
-  background: none; border: 1px solid var(--border); color: var(--muted);
-  padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; cursor: pointer;
-  text-transform: uppercase; letter-spacing: .05em;
-}
-.grid-toggle:hover { color: var(--text); border-color: var(--text); }
-.grid-toggle-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .2s; }
-.grid-toggle[aria-pressed="true"] { color: #ff3b3b; border-color: #ff3b3b; }
-.grid-toggle[aria-pressed="true"] .grid-toggle-dot { background: #ff3b3b; }
 
 /* Nav link text roll on hover */
 .roll { display: inline-block; overflow: hidden; vertical-align: top; height: 1.65em; }
@@ -363,7 +353,7 @@ a:hover .roll-inner { transform: translateY(-50%); }
   .nav-toggle[aria-expanded="true"] span:first-child { transform: translateY(4px) rotate(45deg); }
   .nav-toggle[aria-expanded="true"] span:last-child { transform: translateY(-4px) rotate(-45deg); }
   .grade-list-cols { grid-template-columns: 1fr; }
-  .grid-toggle { margin-left: 16px; }
+  .term-toggle { margin-left: 16px; }
   .scroll-hint { display: none; }
   .section-title { font-size: 1.6rem; }
 }
@@ -373,11 +363,10 @@ a:hover .roll-inner { transform: translateY(-50%); }
    ========================================================= */
 .term-toggle {
   background: none; border: 1px solid var(--border); color: var(--muted);
-  width: 34px; height: 28px; border-radius: 8px; margin-left: 8px; cursor: pointer;
+  width: 34px; height: 28px; border-radius: 8px; margin-left: 24px; cursor: pointer;
   font-size: 0.8rem; font-weight: 700;
 }
 .term-toggle:hover { color: var(--accent-2); border-color: var(--accent-2); }
-.grid-toggle { margin-right: 0; }
 .term-toggle { margin-right: auto; }
 
 .eyebrow-term {
@@ -583,7 +572,6 @@ body.term-open { overflow: hidden; }
   .setup-stage { height: 440px; }
   .hotspot { width: 24px; height: 24px; margin: -12px 0 0 -12px; font-size: 0.6rem; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
   .setup-btn { padding: 6px 11px; font-size: 0.76rem; }
-  .term-toggle { margin-left: 6px; }
   .eyebrow-term { display: block; margin: 4px 0 0; }
 }
 

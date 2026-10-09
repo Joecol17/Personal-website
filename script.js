@@ -25,15 +25,12 @@ if (!(window.gsap && window.ScrollTrigger && window.SplitText && window.Lenis)) 
 const animate = root.classList.contains("anim");
 const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
 
-// ---------- Grid overlay (press G or use the nav button) ----------
-const gridToggle = document.querySelector(".grid-toggle");
+// ---------- Grid overlay (press G, or type grid in the terminal) ----------
 const gridCols = document.querySelectorAll(".grid-cols span");
 let gridOn = false;
 
 function setGrid(on) {
   gridOn = on;
-  gridToggle.setAttribute("aria-pressed", String(on));
-  gridToggle.querySelector(".grid-state").textContent = on ? "on" : "off";
   if (animate) {
     gsap.to(gridCols, {
       scaleY: on ? 1 : 0,
@@ -48,7 +45,6 @@ function setGrid(on) {
   }
 }
 
-gridToggle.addEventListener("click", () => setGrid(!gridOn));
 // Shared hooks used by the terminal and other interactive pieces
 window.site = {
   setGrid,

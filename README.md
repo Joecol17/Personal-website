@@ -18,6 +18,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
   - `hdr.js`, `bloom.js`: a small Radiance `.hdr` loader for the studio lighting, and the HDR bloom pass
   - `sched.js`: spreads the model's set-up over the page's spare time (see "Loading the 3D model" below)
 - `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`: site icons
+- `og-image.png`: the 1200×630 preview image shown when the link is shared (LinkedIn, Slack, iMessage…). The link-preview tags in `index.html` use the full `https://joecol17.github.io/Personal-website/` address, so update them if the site moves to its own domain
 - `vendor/`: local copies of [GSAP](https://gsap.com) (with ScrollTrigger and SplitText), [Lenis](https://lenis.darkroom.engineering) smooth scroll, and a trimmed three.js r186 build (`three.bundle.min.js`, loaded only when the 3D section is near)
 - `assets/studio_small_08_1k.hdr`: studio lighting for the 3D model
 
@@ -29,7 +30,7 @@ Personal portfolio site for Joseph Collyer: a static site built with plain HTML,
 esbuild entry.js --bundle --minify --format=esm --legal-comments=inline --outfile=vendor/three.bundle.min.js
 ```
 
-Press **G** (or click the Grid button in the nav) to show the 12-column layout grid. Animations are switched off automatically for visitors who have reduced motion enabled.
+Press **G** (or type `grid` in the terminal) to show the 12-column layout grid. Animations are switched off automatically for visitors who have reduced motion enabled.
 
 ## Performance tiers
 
